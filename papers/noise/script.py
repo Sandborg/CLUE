@@ -114,6 +114,23 @@ def run(G: DensityOperator, v: DensityVector):
         subspace_class=NumericalSubspace
     )
 
+def grover_experiment(qubits:int, starting:float, finishing:float, increase="log") -> tuple[tuple[float,int]]:
+    epsilon = starting
+    result = []
+    while epsilon < finishing:
+        input = G_input(qubits)
+        circuit = G(qubits, epsilon)
+        print(f"Computing the reduction with noise={epsilon:.04f}", flush=True, end="\r")
+        S = run(circuit, input)
+        result.append((epsilon,S.dim()))
+
+        if increase == "log":
+            epsilon = epsilon + 10**floor(log10(epsilon))
+        elif increase == "linear":
+            epsilon += starting
+
+    return tuple(result)
+
 def evolution(U, v, starting:float, finishing:float, increase="log") -> tuple[tuple[float,int]]:
     epsilon = starting
     result = []
@@ -131,8 +148,9 @@ def evolution(U, v, starting:float, finishing:float, increase="log") -> tuple[tu
 
 import matplotlib.pyplot as plt
 
-def plot(result: tuple[tuple[float, int]], scale: str = "linear"):
+def plot(result: tuple[tuple[float, int]], qubits: int, test: str = "Grover", scale: str = "linear"):
     xvalues, yvalues = list(zip(*result))
+    plt.title(f'Reduction for {test} with {qubits} qubits')
     plt.plot(xvalues, yvalues, 'o', linestyle="-")
     plt.xscale(scale)
     plt.show()
