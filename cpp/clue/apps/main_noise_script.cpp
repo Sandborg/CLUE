@@ -14,7 +14,7 @@
 
 using namespace std;
 
-NoisyExperiment *generate_example(string name, luint size, ExperimentType type, string observable, dd::Package<> *package)
+Experiment *generate_example(string name, luint size, ExperimentType type, string observable, dd::Package<> *package)
 {
     string upper = boost::to_upper_copy<std::string>(name);
     if (upper == "SAT")
@@ -92,14 +92,14 @@ int main_script(string name, ExperimentType type, luint m, luint M, luint repeat
                 try
                 {
                     dd::Package<> *package = new dd::Package<>(size);
-                    NoisyExperiment *experiment = generate_example(name, size, type, obs, package);
-                    cout << "Generated example\n\t" << NoisyExperiment->to_string() << endl;
-                    NoisyExperiment->run();
+                    Experiment *experiment = generate_example(name, size, type, obs, package);
+                    cout << "Generated example\n\t" << experiment->to_string() << endl;
+                    experiment->run();
 
-                    cout << "### -- Finished execution " << execution << "/" << repeats << "(size=" << size << "): took " << NoisyExperiment->total_time() << "s." << endl;
+                    cout << "### -- Finished execution " << execution << "/" << repeats << "(size=" << size << "): took " << experiment->total_time() << "s." << endl;
 
-                    total_time += NoisyExperiment->total_time();
-                    out << NoisyExperiment->to_csv() << endl;
+                    total_time += experiment->total_time();
+                    out << experiment->to_csv() << endl;
                     delete experiment;
                     delete package;
                 }

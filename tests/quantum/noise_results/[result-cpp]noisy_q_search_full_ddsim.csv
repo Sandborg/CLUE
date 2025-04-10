@@ -187,3 +187,4 @@
 9,2,Grover,H,0,1,16,0.003363,0.020936,"Grover Search Algorithm, with noisy circuit, of 9 q-bits (1 is a flag) of [(255, 11111111)]"
 9,2,Grover,H,0,1,16,0.008639,0.025233,"Grover Search Algorithm, with noisy circuit, of 9 q-bits (1 is a flag) of [(255, 11111111)]"
 9,2,Grover,H,0,1,16,0.011382,0.025181,"Grover Search Algorithm, with noisy circuit, of 9 q-bits (1 is a flag) of [(255, 11111111)]"
+9,2,Grover,H,0,1,16,0.004567,0.019072,"Grover Search Algorithm, with noisy circuit, of 9 q-bits (1 is a flag) of [(255, 11111111)]"
