@@ -6,9 +6,11 @@ if(NOT TARGET ${PROJECT_NAME}-experiments)
     ${PROJECT_NAME}-experiments
     ${EXPERIMENTS_HEADERS}
     ${CMAKE_CURRENT_SOURCE_DIR}/Experiment.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/NoisyExperiment.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/SATExperiment.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/CUTExperiment.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/GroverExperiment.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/NoisyGroverExperiment.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/BenchmarkExperiment.cpp
   )
   target_link_libraries(${PROJECT_NAME}-experiments PUBLIC ${PROJECT_NAME})

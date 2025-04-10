@@ -9,4 +9,5 @@ endmacro()
 
 ADD_APP_EXECUTABLE(main)
 #ADD_APP_EXECUTABLE(main_QASM) removed from cmake because of repeated failure to build.
+ADD_APP_EXECUTABLE(main_noise_script ${PROJECT_NAME}-experiments)
 ADD_APP_EXECUTABLE(main_script ${PROJECT_NAME}-experiments)
