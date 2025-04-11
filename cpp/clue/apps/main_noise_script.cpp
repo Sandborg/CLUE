@@ -6,7 +6,6 @@
 #include <cstdlib>
 #include <string>
 
-#include "experiments/NoisyExperiment.hpp"
 #include "experiments/SATExperiment.hpp"
 #include "experiments/CUTExperiment.hpp"
 #include "experiments/NoisyGroverExperiment.hpp"
