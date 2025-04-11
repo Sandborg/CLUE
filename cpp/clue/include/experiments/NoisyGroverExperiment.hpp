@@ -18,6 +18,7 @@ class NoisyQuantumSearch : public Experiment
 protected:
     luint qbits;
     unordered_set<luint> success_set;
+    vector<dd::fp> fidelities;
 
     /* Method that serves as an oracle for the search function */
     bool oracle(boost::dynamic_bitset<>);
@@ -38,6 +39,7 @@ protected:
     qc::QuantumComputation *quantum(double);
     qc::QuantumComputation *quantum_B(double);
     NoisyQuantumSearch *change_exec_type(ExperimentType);
+    void run_ddsim_alone() override;
 
 public:
     NoisyQuantumSearch(luint, vector<luint>, luint, ExperimentType, dd::Package<> *);

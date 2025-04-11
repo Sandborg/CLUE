@@ -2,6 +2,7 @@
 
 #include <cstdlib>
 #include "dd/Package.hpp"
+#include "dd/Simulation.hpp"
 
 NoisyQuantumSearch::NoisyQuantumSearch(luint nQbits, vector<luint> success, luint eIterations, ExperimentType eType, dd::Package<> *ePackage) : Experiment("Grover", "H", eIterations, eType, ePackage)
 {
@@ -263,4 +264,38 @@ string NoisyQuantumSearch::to_string()
     }
     stream << "]\"";
     return stream.str();
+}
+
+/* Method that runs the CLUE reduction (only used when this->type == DDSIM_ALONE) */
+void NoisyQuantumSearch::run_ddsim_alone()
+{
+    cerr << "Called from derived class" << endl;
+    cerr << "+++ [ddsim-only @ " << this->name << "] Computing DDSIM ONLY execution for " << this->name << endl;
+    clock_t begin = clock();
+    cerr << "+++ [ddsim-only @ " << this->name << "] Setting up observable (" << this->observable << ") and system..." << endl;
+    dd::vEdge obs = this->dd_observable();
+    double par_value = 1. / (pow(2., static_cast<double>(this->size())) * static_cast<double>(10 * this->iterations));
+    qc::QuantumComputation *U_P = this->quantum(par_value);
+    qc::QuantumComputation *U_B = this->quantum_B(par_value);
+
+    cerr << "+++ [ddsim-only @ " << this->name << "] Computing the iteration (U_P*U_B)^iterations..." << endl;
+    clock_t b_iteration = clock();
+    dd::vEdge current = obs; // We create a new vector for the current
+    for (luint i = 0; i < this->iterations; i++)
+    {
+        current = dd::simulate<>(U_P, current, *package);
+        current = dd::simulate<>(U_B, current, *package);
+    }
+    clock_t a_iteration = clock();
+    clock_t end = clock();
+
+    // We store the data
+    this->red_time = 0.0;
+    this->it_time = time_to_double(b_iteration, a_iteration);
+    this->tot_time = time_to_double(begin, end);
+
+    delete U_P;
+    delete U_B;
+
+    return;
 }
