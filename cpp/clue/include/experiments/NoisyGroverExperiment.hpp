@@ -2,6 +2,7 @@
 #define CLUE_EX_SEARCH
 
 #include "Experiment.hpp"
+#include "dd/Package.hpp"
 #include "boost/dynamic_bitset.hpp"
 #include "NoisyQC.hpp"
 
@@ -18,7 +19,8 @@ class NoisyQuantumSearch : public Experiment
 protected:
     luint qbits;
     unordered_set<luint> success_set;
-    vector<dd::fp> fidelities;
+    vector<dd::vEdge> succes_states;
+    dd::fp fidelity;
 
     /* Method that serves as an oracle for the search function */
     bool oracle(boost::dynamic_bitset<>);
@@ -46,7 +48,9 @@ public:
 
     static NoisyQuantumSearch *random(luint, ExperimentType, dd::Package<> *);
     static NoisyQuantumSearch *ones_string(luint, ExperimentType, dd::Package<> *);
+    void convert_succes_set_qstate(); // Convert the succes values to a quantum state
 
+    string to_csv(char = ',') override;
     /* Method to get the string out of an experiment */
     string to_string();
 };

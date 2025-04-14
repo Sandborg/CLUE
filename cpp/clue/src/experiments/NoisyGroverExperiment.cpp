@@ -1,7 +1,6 @@
 #include "experiments/NoisyGroverExperiment.hpp"
 
 #include <cstdlib>
-#include "dd/Package.hpp"
 #include "dd/Simulation.hpp"
 
 NoisyQuantumSearch::NoisyQuantumSearch(luint nQbits, vector<luint> success, luint eIterations, ExperimentType eType, dd::Package<> *ePackage) : Experiment("Grover", "H", eIterations, eType, ePackage)
@@ -266,14 +265,35 @@ string NoisyQuantumSearch::to_string()
     return stream.str();
 }
 
+void NoisyQuantumSearch::convert_succes_set_qstate()
+{
+    for (const auto &succes : success_set)
+    {
+        auto bitchain = boost::dynamic_bitset<>(this->size() - 1UL, succes);
+        vector<dd::BasisStates> states;
+
+        for (int i = 0; i < bitchain.size(); i++)
+        {
+            if (bitchain[i])
+                states.push_back(dd::BasisStates::one);
+            else
+                states.push_back(dd::BasisStates::zero);
+        }
+
+        states.push_back(dd::BasisStates::minus);
+
+        succes_states.push_back(this->package->makeBasisState(this->size(), states));
+    }
+}
+
 /* Method that runs the CLUE reduction (only used when this->type == DDSIM_ALONE) */
 void NoisyQuantumSearch::run_ddsim_alone()
 {
-    cerr << "Called from derived class" << endl;
     cerr << "+++ [ddsim-only @ " << this->name << "] Computing DDSIM ONLY execution for " << this->name << endl;
     clock_t begin = clock();
     cerr << "+++ [ddsim-only @ " << this->name << "] Setting up observable (" << this->observable << ") and system..." << endl;
     dd::vEdge obs = this->dd_observable();
+    this->convert_succes_set_qstate();
     double par_value = 1. / (pow(2., static_cast<double>(this->size())) * static_cast<double>(10 * this->iterations));
     qc::QuantumComputation *U_P = this->quantum(par_value);
     qc::QuantumComputation *U_B = this->quantum_B(par_value);
@@ -286,6 +306,13 @@ void NoisyQuantumSearch::run_ddsim_alone()
         current = dd::simulate<>(U_P, current, *package);
         current = dd::simulate<>(U_B, current, *package);
     }
+
+    /* In this example, and the other Grover example, there is only 1 succes value.
+       TODO: Talk to Max about how this can be extended to multiple success values.
+    */
+    this->fidelity = this->package->fidelity(current, this->succes_states[0]);
+    cerr << this->fidelity << endl;
+
     clock_t a_iteration = clock();
     clock_t end = clock();
 
@@ -298,4 +325,12 @@ void NoisyQuantumSearch::run_ddsim_alone()
     delete U_B;
 
     return;
+}
+
+string NoisyQuantumSearch::to_csv(char delimiter)
+{
+    stringstream stream;
+    stream << this->size() << delimiter << this->bound_size() << delimiter << this->name << delimiter << this->observable << delimiter << this->red_time << delimiter << this->red_ratio << delimiter << this->iterations << delimiter << this->it_time << delimiter << this->tot_time << delimiter << fidelity << delimiter << this->to_string();
+
+    return stream.str();
 }

@@ -28,11 +28,13 @@ qc::QuantumComputation *NoisyQuantumComputation::build_noisy_qc()
         }
     }
 
+    /*
     std::cerr << "Built the following circuit based on the given epsilon values: \n"
               << *qc
               << "The circuit without noise: \n"
               << this->build_non_noisy_qc()
               << std::endl;
+    */
     return qc;
 }
 

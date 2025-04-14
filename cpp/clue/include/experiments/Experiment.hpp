@@ -102,7 +102,7 @@ public:
     /* Method to get the string out of an experiment */
     virtual string to_string() = 0;
     /* Method that generate the CSV row for this experiment */
-    string to_csv(char = ',');
+    virtual string to_csv(char = ',');
 
     /* Method to get the total execution time */
     double total_time() { return this->tot_time; }
