@@ -1,12 +1,1 @@
-size,bound,name,obs,time_lumping,red. ratio, kappa,time_iterations,time,fidelity,formula
-9,2,Grover,H,0,1,16,0.005403,0.01747,0.00155539,"Grover Search Algorithm, with noisy circuit, of 9 q-bits (1 is a flag) of [(255, 11111111)]"
-9,2,Grover,H,0,1,16,0.004298,0.014884,0.000682962,"Grover Search Algorithm, with noisy circuit, of 9 q-bits (1 is a flag) of [(255, 11111111)]"
-9,2,Grover,H,0,1,16,0.0019,0.012377,0.00390625,"Grover Search Algorithm, with noisy circuit, of 9 q-bits (1 is a flag) of [(255, 11111111)]"
-9,2,Grover,H,0,1,16,0.003255,0.013796,0.00397398,"Grover Search Algorithm, with noisy circuit, of 9 q-bits (1 is a flag) of [(255, 11111111)]"
-9,2,Grover,H,0,1,16,0.000778,0.011366,0.00390625,"Grover Search Algorithm, with noisy circuit, of 9 q-bits (1 is a flag) of [(255, 11111111)]"
-9,2,Grover,H,0,1,16,0.005321,0.015893,0.00437742,"Grover Search Algorithm, with noisy circuit, of 9 q-bits (1 is a flag) of [(255, 11111111)]"
-9,2,Grover,H,0,1,16,0.001623,0.012425,0.00390625,"Grover Search Algorithm, with noisy circuit, of 9 q-bits (1 is a flag) of [(255, 11111111)]"
-9,2,Grover,H,0,1,16,0.000783,0.011626,0.00390625,"Grover Search Algorithm, with noisy circuit, of 9 q-bits (1 is a flag) of [(255, 11111111)]"
-9,2,Grover,H,0,1,16,0.005592,0.016058,0.00437742,"Grover Search Algorithm, with noisy circuit, of 9 q-bits (1 is a flag) of [(255, 11111111)]"
-9,2,Grover,H,0,1,16,0.005758,0.016443,0.000682962,"Grover Search Algorithm, with noisy circuit, of 9 q-bits (1 is a flag) of [(255, 11111111)]"
-9,2,Grover,H,0,1,16,0.003112,0.013858,0.00437742,"Grover Search Algorithm, with noisy circuit, of 9 q-bits (1 is a flag) of [(255, 11111111)]"
+size,bound,name,obs,time_lumping,red. ratio, kappa,time_iterations,time,epsilon,fidelity,formula
