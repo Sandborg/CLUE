@@ -3,7 +3,7 @@
 #include <cstdlib>
 #include "dd/Simulation.hpp"
 
-NoisyQuantumSearch::NoisyQuantumSearch(luint nQbits, vector<luint> success, luint eIterations, ExperimentType eType, dd::Package<> *ePackage) : Experiment("Grover", "H", eIterations, eType, ePackage)
+NoisyQuantumSearch::NoisyQuantumSearch(luint nQbits, vector<luint> success, luint eIterations, ExperimentType eType, dd::Package<> *ePackage, double epsilon) : Experiment("Grover", "H", eIterations, eType, ePackage)
 {
     this->qbits = nQbits;
     luint bound = static_cast<luint>(pow(2UL, nQbits - 1));
@@ -18,22 +18,31 @@ NoisyQuantumSearch::NoisyQuantumSearch(luint nQbits, vector<luint> success, luin
             this->success_set.insert(el);
         }
     }
+
+    if (epsilon < 0.0 || epsilon > 1.0)
+    {
+        throw domain_error("The value of epsilon should be between 0 and 1");
+    }
+    else
+    {
+        this->epsilon = epsilon;
+    }
 }
 /*method to instead of having random succes values we search for, we want to use a trivial case of n nQbits - 1 ones*/
-/*static*/ NoisyQuantumSearch *NoisyQuantumSearch::ones_string(luint nQbits, ExperimentType eType, dd::Package<> *ePackage)
+/*static*/ NoisyQuantumSearch *NoisyQuantumSearch::ones_string(luint nQbits, ExperimentType eType, dd::Package<> *ePackage, double epsilon)
 {
     luint value = static_cast<luint>(pow(2UL, nQbits - 1));
-    luint iterations = static_cast<luint>(ceil(pow(2., static_cast<double>(nQbits - 1) / 2.)));
+    luint iterations = static_cast<luint>(ceil(pow(2., static_cast<double>(nQbits - 1) / 2.))) - 1;
 
     auto success_set = vector<luint>();
     success_set.push_back(value - 1UL);
 
-    return new NoisyQuantumSearch(nQbits, success_set, iterations, eType, ePackage);
+    return new NoisyQuantumSearch(nQbits, success_set, iterations, eType, ePackage, epsilon);
 }
-/*static*/ NoisyQuantumSearch *NoisyQuantumSearch::random(luint nQbits, ExperimentType eType, dd::Package<> *ePackage)
+/*static*/ NoisyQuantumSearch *NoisyQuantumSearch::random(luint nQbits, ExperimentType eType, dd::Package<> *ePackage, double epsilon)
 {
     luint half_size = static_cast<luint>(pow(2UL, nQbits - 1));
-    luint iterations = static_cast<luint>(ceil(pow(2., static_cast<double>(nQbits - 1) / 2.)));
+    luint iterations = static_cast<luint>(ceil(pow(2., static_cast<double>(nQbits - 1) / 2.))) - 1;
 
     // RANDOM WITH SEVERAL SUCCESS VALUES
     luint number_of_successes = 1U; //(static_cast<luint>(rand())%(nQbits-1))+1;
@@ -42,7 +51,7 @@ NoisyQuantumSearch::NoisyQuantumSearch(luint nQbits, vector<luint> success, luin
     {
         success_set.push_back(static_cast<luint>(rand()) % half_size);
     }
-    return new NoisyQuantumSearch(nQbits, success_set, iterations, eType, ePackage);
+    return new NoisyQuantumSearch(nQbits, success_set, iterations, eType, ePackage, epsilon);
 }
 
 bool NoisyQuantumSearch::oracle(boost::dynamic_bitset<> bitchain)
@@ -220,7 +229,7 @@ dd::CMat NoisyQuantumSearch::matrix_B(dd::CMat &U)
 }
 qc::QuantumComputation *NoisyQuantumSearch::quantum(double)
 {
-    double epsilon = 0.3;
+    double epsilon = this->epsilon;
     NoisyQuantumComputation circuit = NoisyQuantumComputation(this->size());
 
     this->quantum_oracle(circuit, epsilon);
@@ -242,7 +251,7 @@ NoisyQuantumSearch *NoisyQuantumSearch::change_exec_type(ExperimentType new_type
         to_copy.push_back(*it);
     }
 
-    return new NoisyQuantumSearch(this->size() - 1, to_copy, this->iterations, new_type, this->package);
+    return new NoisyQuantumSearch(this->size() - 1, to_copy, this->iterations, new_type, this->package, this->epsilon);
 }
 
 string NoisyQuantumSearch::to_string()
@@ -281,9 +290,16 @@ void NoisyQuantumSearch::convert_succes_set_qstate()
         }
 
         states.push_back(dd::BasisStates::minus);
-
         succes_states.push_back(this->package->makeBasisState(this->size(), states));
     }
+}
+
+dd::fp fid_test(dd::Package<> *package, dd::vEdge dd)
+{
+
+    auto fidelity = package->fidelity(dd, dd);
+
+    return fidelity;
 }
 
 /* Method that runs the CLUE reduction (only used when this->type == DDSIM_ALONE) */
@@ -298,21 +314,28 @@ void NoisyQuantumSearch::run_ddsim_alone()
     qc::QuantumComputation *U_P = this->quantum(par_value);
     qc::QuantumComputation *U_B = this->quantum_B(par_value);
 
+    cerr << "Circuit Created:" << endl;
+    cerr << *U_P << endl;
+
     cerr << "+++ [ddsim-only @ " << this->name << "] Computing the iteration (U_P*U_B)^iterations..." << endl;
     clock_t b_iteration = clock();
     dd::vEdge current = obs; // We create a new vector for the current
+
     for (luint i = 0; i < this->iterations; i++)
     {
         current = dd::simulate<>(U_P, current, *package);
         current = dd::simulate<>(U_B, current, *package);
     }
 
-    /* In this example, and the other Grover example, there is only 1 succes value.
-       TODO: Talk to Max about how this can be extended to multiple success values.
-    */
+    cerr << "state vector after simulation" << endl;
+    current.printVector();
+    cerr << "the state vector that we are looking for" << endl;
+    this->succes_states[0].printVector();
     this->fidelity = this->package->fidelity(current, this->succes_states[0]);
-    cerr << this->fidelity << endl;
+    cerr << "The fidelity between the expected state and the result from the simulation: " << this->fidelity << endl;
 
+    // auto fid = fid_test(this->package, current);
+    // cerr << "The fidelity between the state after simulation and itself: " << fid_test << endl;
     clock_t a_iteration = clock();
     clock_t end = clock();
 
@@ -330,7 +353,29 @@ void NoisyQuantumSearch::run_ddsim_alone()
 string NoisyQuantumSearch::to_csv(char delimiter)
 {
     stringstream stream;
-    stream << this->size() << delimiter << this->bound_size() << delimiter << this->name << delimiter << this->observable << delimiter << this->red_time << delimiter << this->red_ratio << delimiter << this->iterations << delimiter << this->it_time << delimiter << this->tot_time << delimiter << fidelity << delimiter << this->to_string();
+    stream << this->size()
+           << delimiter
+           << this->bound_size()
+           << delimiter
+           << this->name
+           << delimiter
+           << this->observable
+           << delimiter
+           << this->red_time
+           << delimiter
+           << this->red_ratio
+           << delimiter
+           << this->iterations
+           << delimiter
+           << this->it_time
+           << delimiter
+           << this->tot_time
+           << delimiter
+           << epsilon
+           << delimiter
+           << fidelity
+           << delimiter
+           << this->to_string();
 
     return stream.str();
 }

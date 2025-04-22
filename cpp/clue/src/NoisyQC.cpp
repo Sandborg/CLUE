@@ -38,13 +38,13 @@ qc::QuantumComputation *NoisyQuantumComputation::build_noisy_qc()
     return qc;
 }
 
-qc::QuantumComputation NoisyQuantumComputation::build_non_noisy_qc()
+qc::QuantumComputation *NoisyQuantumComputation::build_non_noisy_qc()
 {
-    auto qc = qc::QuantumComputation(this->nQubits);
+    auto qc = new qc::QuantumComputation(this->nQubits);
 
     for (const auto &[layer, _] : this->layers)
     {
-        qc.emplace_back(layer.front()->clone());
+        qc->emplace_back(layer.front()->clone());
     }
 
     return qc;

@@ -13,7 +13,7 @@
 
 using namespace std;
 
-Experiment *generate_example(string name, luint size, ExperimentType type, string observable, dd::Package<> *package)
+Experiment *generate_example(string name, luint size, ExperimentType type, string observable, dd::Package<> *package, double epsilon)
 {
     string upper = boost::to_upper_copy<std::string>(name);
     if (upper == "SAT")
@@ -26,7 +26,7 @@ Experiment *generate_example(string name, luint size, ExperimentType type, strin
     }
     else if (upper == "SEARCH")
     {
-        return NoisyQuantumSearch::ones_string(size, type, package);
+        return NoisyQuantumSearch::ones_string(size, type, package, epsilon);
     }
     else
     {
@@ -83,30 +83,41 @@ int main_script(string name, ExperimentType type, luint m, luint M, luint repeat
     cout << "##################################################################################" << endl;
 
     for (luint size = m; size <= M; size++)
-    { // We repeat for each size
-        for (string obs : generate_observables(observable, size))
+    { // We repeat for each size.
+      // For each size we also go from starting to finishing epsilon values.
+
+        double starting = 0.001;
+        double finishing = 1.0;
+        double epsilon = starting;
+
+        while (epsilon < finishing)
         {
-            for (luint execution = 1; execution <= repeats; execution++)
-            { // We repeat "repeats" times
-                try
-                {
-                    dd::Package<> *package = new dd::Package<>(size);
-                    Experiment *experiment = generate_example(name, size, type, obs, package);
-                    cout << "Generated example\n\t" << experiment->to_string() << endl;
-                    experiment->run();
+            cout << "Current epsilon: " << epsilon << endl;
+            for (string obs : generate_observables(observable, size))
+            {
+                for (luint execution = 1; execution <= repeats; execution++)
+                { // We repeat "repeats" times
+                    try
+                    {
+                        dd::Package<> *package = new dd::Package<>(size);
+                        Experiment *experiment = generate_example(name, size, type, obs, package, epsilon);
+                        cout << "Generated example\n\t" << experiment->to_string() << endl;
+                        experiment->run();
 
-                    cout << "### -- Finished execution " << execution << "/" << repeats << "(size=" << size << "): took " << experiment->total_time() << "s." << endl;
+                        cout << "### -- Finished execution " << execution << "/" << repeats << "(size=" << size << "): took " << experiment->total_time() << "s." << endl;
 
-                    total_time += experiment->total_time();
-                    out << experiment->to_csv() << endl;
-                    delete experiment;
-                    delete package;
-                }
-                catch (qc::QFRException &e)
-                {
-                    cout << "### -- Error in execution " << execution << "/" << repeats << "(size=" << size << "): " << e.what() << endl;
+                        total_time += experiment->total_time();
+                        out << experiment->to_csv() << endl;
+                        delete experiment;
+                        delete package;
+                    }
+                    catch (qc::QFRException &e)
+                    {
+                        cout << "### -- Error in execution " << execution << "/" << repeats << "(size=" << size << "): " << e.what() << endl;
+                    }
                 }
             }
+            epsilon = epsilon + pow(10, floor(log10(epsilon)));
         }
     }
     double average_time = total_time / static_cast<double>((M - m + 1) * repeats);
@@ -142,7 +153,7 @@ int main(int argc, char **argv)
     srand(static_cast<unsigned>(time(NULL)));
     string test = "search";
     ExperimentType type = ExperimentType::DDSIM_ALONE;
-    luint m = 9, M = 9, repeats = 10;
+    luint m = 4, M = 4, repeats = 1;
     string observable = "H";
 
     if (argc > 1)

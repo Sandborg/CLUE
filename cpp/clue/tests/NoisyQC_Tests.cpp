@@ -101,7 +101,7 @@ void build_non_noisy_circuit(luint qubits)
     auto non_noisy_qc = nqc.build_non_noisy_qc();
 
     // Check if the size of the non-noisy circuit is equal to the number of layers
-    if (non_noisy_qc.size() != nqc.size())
+    if (non_noisy_qc->size() != nqc.size())
     {
         throw std::runtime_error("The size of the non-noisy circuit does not match the number of layers.");
     }

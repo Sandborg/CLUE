@@ -18,9 +18,10 @@ class NoisyQuantumSearch : public Experiment
 {
 protected:
     luint qbits;
+    double epsilon;
     unordered_set<luint> success_set;
     vector<dd::vEdge> succes_states;
-    dd::fp fidelity;
+    dd::fp fidelity = 0;
 
     /* Method that serves as an oracle for the search function */
     bool oracle(boost::dynamic_bitset<>);
@@ -44,10 +45,10 @@ protected:
     void run_ddsim_alone() override;
 
 public:
-    NoisyQuantumSearch(luint, vector<luint>, luint, ExperimentType, dd::Package<> *);
+    NoisyQuantumSearch(luint, vector<luint>, luint, ExperimentType, dd::Package<> *, double);
 
-    static NoisyQuantumSearch *random(luint, ExperimentType, dd::Package<> *);
-    static NoisyQuantumSearch *ones_string(luint, ExperimentType, dd::Package<> *);
+    static NoisyQuantumSearch *random(luint, ExperimentType, dd::Package<> *, double);
+    static NoisyQuantumSearch *ones_string(luint, ExperimentType, dd::Package<> *, double);
     void convert_succes_set_qstate(); // Convert the succes values to a quantum state
 
     string to_csv(char = ',') override;
