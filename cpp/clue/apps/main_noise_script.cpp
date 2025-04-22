@@ -92,7 +92,6 @@ int main_script(string name, ExperimentType type, luint m, luint M, luint repeat
 
         while (epsilon < finishing)
         {
-            cout << "Current epsilon: " << epsilon << endl;
             for (string obs : generate_observables(observable, size))
             {
                 for (luint execution = 1; execution <= repeats; execution++)
@@ -101,6 +100,8 @@ int main_script(string name, ExperimentType type, luint m, luint M, luint repeat
                     {
                         dd::Package<> *package = new dd::Package<>(size);
                         Experiment *experiment = generate_example(name, size, type, obs, package, epsilon);
+                        cout << "##################################################################################" << endl;
+                        cout << "Current epsilon: " << epsilon << endl;
                         cout << "Generated example\n\t" << experiment->to_string() << endl;
                         experiment->run();
 
@@ -153,7 +154,7 @@ int main(int argc, char **argv)
     srand(static_cast<unsigned>(time(NULL)));
     string test = "search";
     ExperimentType type = ExperimentType::DDSIM_ALONE;
-    luint m = 4, M = 4, repeats = 1;
+    luint m = 3, M = 9, repeats = 10;
     string observable = "H";
 
     if (argc > 1)

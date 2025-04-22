@@ -302,7 +302,7 @@ dd::fp fid_test(dd::Package<> *package, dd::vEdge dd)
     return fidelity;
 }
 
-/* Method that runs the CLUE reduction (only used when this->type == DDSIM_ALONE) */
+/* Method that simulates a quantum circuit without reduction (only used when this->type == DDSIM_ALONE) */
 void NoisyQuantumSearch::run_ddsim_alone()
 {
     cerr << "+++ [ddsim-only @ " << this->name << "] Computing DDSIM ONLY execution for " << this->name << endl;
@@ -327,15 +327,16 @@ void NoisyQuantumSearch::run_ddsim_alone()
         current = dd::simulate<>(U_B, current, *package);
     }
 
-    cerr << "state vector after simulation" << endl;
+    /*cerr << "state vector after simulation" << endl;
     current.printVector();
     cerr << "the state vector that we are looking for" << endl;
     this->succes_states[0].printVector();
-    this->fidelity = this->package->fidelity(current, this->succes_states[0]);
-    cerr << "The fidelity between the expected state and the result from the simulation: " << this->fidelity << endl;
 
     // auto fid = fid_test(this->package, current);
     // cerr << "The fidelity between the state after simulation and itself: " << fid_test << endl;
+    */
+    this->fidelity = this->package->fidelity(current, this->succes_states[0]);
+    cerr << "The fidelity between the expected state and the result from the simulation: " << this->fidelity << endl;
     clock_t a_iteration = clock();
     clock_t end = clock();
 
