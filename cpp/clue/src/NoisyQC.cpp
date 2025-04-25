@@ -18,6 +18,8 @@ qc::QuantumComputation *NoisyQuantumComputation::build_noisy_qc()
 
     for (const auto &[layer, epsilon] : this->layers)
     {
+
+        std::cerr << layer.front()->getName() << " " << qc::toString(layer.front()->getType()) << std::endl;
         if (std::generate_canonical<double, 10>(gen) > epsilon) // add the layer with probability 1-epsilon. Else do nothing.
         {
             qc->emplace_back(layer.front()->clone());

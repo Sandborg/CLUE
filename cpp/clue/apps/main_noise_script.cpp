@@ -154,7 +154,7 @@ int main(int argc, char **argv)
     srand(static_cast<unsigned>(time(NULL)));
     string test = "search";
     ExperimentType type = ExperimentType::DDSIM_ALONE;
-    luint m = 3, M = 9, repeats = 10;
+    luint m = 4, M = 4, repeats = 1;
     string observable = "H";
 
     if (argc > 1)
