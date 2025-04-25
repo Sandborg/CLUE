@@ -51,6 +51,7 @@ public:
     static NoisyQuantumSearch *ones_string(luint, ExperimentType, dd::Package<> *, unordered_map<string, vector<double>>);
     void add_distribution(string, vector<double>);
     void convert_succes_set_qstate(); // Convert the succes values to a quantum state
+    string epsilon_gate_distribution();
 
     string to_csv(char = ',') override;
     /* Method to get the string out of an experiment */

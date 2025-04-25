@@ -3,7 +3,7 @@
 #include <cstdlib>
 #include "dd/Simulation.hpp"
 
-NoisyQuantumSearch::NoisyQuantumSearch(luint nQbits, vector<luint> success, luint eIterations, ExperimentType eType, dd::Package<> *ePackage, unordered_map<string, vector<double>> P) : Experiment("Grover", "H", eIterations, eType, ePackage)
+NoisyQuantumSearch::NoisyQuantumSearch(luint nQbits, vector<luint> success, luint eIterations, ExperimentType eType, dd::Package<> *ePackage, unordered_map<string, vector<double>> _P) : Experiment("Grover", "H", eIterations, eType, ePackage)
 {
     this->qbits = nQbits;
     luint bound = static_cast<luint>(pow(2UL, nQbits - 1));
@@ -19,6 +19,17 @@ NoisyQuantumSearch::NoisyQuantumSearch(luint nQbits, vector<luint> success, luin
         }
     }
 
+    for (const auto &[k, v] : _P)
+    {
+        double sum = 0.0;
+        for (const auto &x : v)
+        {
+            sum += x;
+        }
+        if (sum != 1.0)
+            throw std::runtime_error("The probabilities given for " + k + " does not sum to 1.");
+    }
+    this->P = _P;
     // TODO: Check if all distributions in P equal 1.
 }
 
@@ -310,6 +321,8 @@ void NoisyQuantumSearch::run_ddsim_alone()
     cerr << "Circuit Created:" << endl;
     cerr << *U_P << endl;
 
+    cerr << "+++ Current epsilon distributions: " << this->epsilon_gate_distribution() << endl;
+
     cerr << "+++ [ddsim-only @ " << this->name << "] Computing the iteration (U_P*U_B)^iterations..." << endl;
     clock_t b_iteration = clock();
     dd::vEdge current = obs; // We create a new vector for the current
@@ -368,6 +381,23 @@ void NoisyQuantumSearch::add_distribution(string type, vector<double> probabilit
     this->P[type] = probabilities;
 }
 
+string NoisyQuantumSearch::epsilon_gate_distribution()
+{
+    stringstream stream;
+    auto it = this->P.begin();
+    if (it != this->P.end())
+    {
+        stream << "(" << it->first << ", " << (1 - it->second[0]) << ")";
+        it++;
+    }
+    while (it != this->P.end())
+    {
+        stream << ", " << "(" << it->first << ", " << (1 - it->second[0]) << ")";
+        it++;
+    }
+    return stream.str();
+}
+
 string NoisyQuantumSearch::to_csv(char delimiter)
 {
     stringstream stream;
@@ -389,7 +419,7 @@ string NoisyQuantumSearch::to_csv(char delimiter)
            << delimiter
            << this->tot_time
            << delimiter
-           << 0 // It's the epsilon value in the csv file, change this to something appropriate
+           << epsilon_gate_distribution()
            << delimiter
            << fidelity
            << delimiter

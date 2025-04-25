@@ -59,6 +59,26 @@ vector<string> generate_observables(string observable, luint size)
     return result;
 }
 
+/*
+    In our implementation Grover uses the gates X(the mcx), H and Z, so we have to create for each of these.
+
+    P(H) = {H,I,X,Y,Z}
+    P(X) = {X,I,X,Y,Z}
+    P(Z) = {Z,I,X,Y,Z}
+
+    We use lower case for the gates.
+*/
+unordered_map<string, vector<double>> generate_grover_distribution()
+{
+    unordered_map<string, vector<double>> P;
+
+    P["x"] = {0.88, 0.05, 0.02, 0.03, 0.02};
+    P["h"] = {0.92, 0.01, 0.02, 0.03, 0.02};
+    P["z"] = {0.96, 0.01, 0.01, 0.01, 0.01};
+
+    return P;
+}
+
 int main_script(string name, ExperimentType type, luint m, luint M, luint repeats, string observable)
 {
     double total_time = 0.;
@@ -84,40 +104,31 @@ int main_script(string name, ExperimentType type, luint m, luint M, luint repeat
 
     for (luint size = m; size <= M; size++)
     { // We repeat for each size.
-      // For each size we also go from starting to finishing epsilon values.
-        double starting = 0.001;
-        double finishing = 0.002;
-        double epsilon = starting;
 
-        while (epsilon < finishing)
+        for (string obs : generate_observables(observable, size))
         {
-            for (string obs : generate_observables(observable, size))
-            {
-                for (luint execution = 1; execution <= repeats; execution++)
-                { // We repeat "repeats" times
-                    try
-                    {
-                        dd::Package<> *package = new dd::Package<>(size);
-                        Experiment *experiment = generate_example(name, size, type, obs, package, epsilon);
-                        cout << "##################################################################################" << endl;
-                        cout << "Current epsilon: " << epsilon << endl;
-                        cout << "Generated example\n\t" << experiment->to_string() << endl;
-                        experiment->run();
+            for (luint execution = 1; execution <= repeats; execution++)
+            { // We repeat "repeats" times
+                try
+                {
+                    dd::Package<> *package = new dd::Package<>(size);
+                    Experiment *experiment = generate_example(name, size, type, obs, package, generate_grover_distribution());
+                    cout << "##################################################################################" << endl;
+                    cout << "Generated example\n\t" << experiment->to_string() << endl;
+                    experiment->run();
 
-                        cout << "### -- Finished execution " << execution << "/" << repeats << "(size=" << size << "): took " << experiment->total_time() << "s." << endl;
+                    cout << "### -- Finished execution " << execution << "/" << repeats << "(size=" << size << "): took " << experiment->total_time() << "s." << endl;
 
-                        total_time += experiment->total_time();
-                        out << experiment->to_csv() << endl;
-                        delete experiment;
-                        delete package;
-                    }
-                    catch (qc::QFRException &e)
-                    {
-                        cout << "### -- Error in execution " << execution << "/" << repeats << "(size=" << size << "): " << e.what() << endl;
-                    }
+                    total_time += experiment->total_time();
+                    out << experiment->to_csv() << endl;
+                    delete experiment;
+                    delete package;
+                }
+                catch (qc::QFRException &e)
+                {
+                    cout << "### -- Error in execution " << execution << "/" << repeats << "(size=" << size << "): " << e.what() << endl;
                 }
             }
-            epsilon = epsilon + pow(10, floor(log10(epsilon)));
         }
     }
     double average_time = total_time / static_cast<double>((M - m + 1) * repeats);

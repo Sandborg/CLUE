@@ -19,9 +19,10 @@ qc::QuantumComputation *NoisyQuantumComputation::build_noisy_qc(const std::unord
 
     for (const auto &layer : this->layers)
     {
-        std::string op_name = layer.front()->getName();
+        auto op_name = layer.front()->getName();
+        std::discrete_distribution<> d(P[op_name]);
 
-        int gate_idx = std::discrete_distribution(P[op_name]);
+        int gate_idx = 0;
         // std::cerr << layer.front()->getName() << " " << qc::toString(layer.front()->getType()) << std::endl;
 
         switch (gate_idx)
@@ -29,14 +30,18 @@ qc::QuantumComputation *NoisyQuantumComputation::build_noisy_qc(const std::unord
         case 0: // the intended gate to be applied
             qc->emplace_back(layer.front()->clone());
             break;
-        case 1: // The identify gate is applied.
+        case 1: // The I gate is applied.
             qc->i(layer.front()->getTargets()[0]);
+            break;
         case 2: // The X (not gate) is applied.
             qc->x(layer.front()->getTargets()[0]);
+            break;
         case 3: // The Y gate is applied.
             qc->y(layer.front()->getTargets()[0]);
+            break;
         case 4: // The Z gate is applied.
             qc->z(layer.front()->getTargets()[0]);
+            break;
         default:
             break;
         }
@@ -52,7 +57,7 @@ qc::QuantumComputation *NoisyQuantumComputation::build_noisy_qc(const std::unord
     return qc;
 }
 
-qc::QuantumComputation *NoisyQuantumComputation::build_non_noisy_qc(const std::unordered_map<std::string, std::vector<double>> &)
+qc::QuantumComputation *NoisyQuantumComputation::build_non_noisy_qc()
 {
     auto qc = new qc::QuantumComputation(this->nQubits);
 
