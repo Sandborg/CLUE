@@ -3,7 +3,7 @@
 #include <cstdlib>
 #include "dd/Simulation.hpp"
 
-NoisyQuantumSearch::NoisyQuantumSearch(luint nQbits, vector<luint> success, luint eIterations, ExperimentType eType, dd::Package<> *ePackage, double epsilon) : Experiment("Grover", "H", eIterations, eType, ePackage)
+NoisyQuantumSearch::NoisyQuantumSearch(luint nQbits, vector<luint> success, luint eIterations, ExperimentType eType, dd::Package<> *ePackage, unordered_map<string, vector<double>> P) : Experiment("Grover", "H", eIterations, eType, ePackage)
 {
     this->qbits = nQbits;
     luint bound = static_cast<luint>(pow(2UL, nQbits - 1));
@@ -19,17 +19,11 @@ NoisyQuantumSearch::NoisyQuantumSearch(luint nQbits, vector<luint> success, luin
         }
     }
 
-    if (epsilon < 0.0 || epsilon > 1.0)
-    {
-        throw domain_error("The value of epsilon should be between 0 and 1");
-    }
-    else
-    {
-        this->epsilon = epsilon;
-    }
+    // TODO: Check if all distributions in P equal 1.
 }
+
 /*method to instead of having random succes values we search for, we want to use a trivial case of n nQbits - 1 ones*/
-/*static*/ NoisyQuantumSearch *NoisyQuantumSearch::ones_string(luint nQbits, ExperimentType eType, dd::Package<> *ePackage, double epsilon)
+/*static*/ NoisyQuantumSearch *NoisyQuantumSearch::ones_string(luint nQbits, ExperimentType eType, dd::Package<> *ePackage, unordered_map<string, vector<double>> P)
 {
     luint value = static_cast<luint>(pow(2UL, nQbits - 1));
     luint iterations = static_cast<luint>(ceil(pow(2., static_cast<double>(nQbits - 1) / 2.))) - 1;
@@ -37,9 +31,9 @@ NoisyQuantumSearch::NoisyQuantumSearch(luint nQbits, vector<luint> success, luin
     auto success_set = vector<luint>();
     success_set.push_back(value - 1UL);
 
-    return new NoisyQuantumSearch(nQbits, success_set, iterations, eType, ePackage, epsilon);
+    return new NoisyQuantumSearch(nQbits, success_set, iterations, eType, ePackage, P);
 }
-/*static*/ NoisyQuantumSearch *NoisyQuantumSearch::random(luint nQbits, ExperimentType eType, dd::Package<> *ePackage, double epsilon)
+/*static*/ NoisyQuantumSearch *NoisyQuantumSearch::random(luint nQbits, ExperimentType eType, dd::Package<> *ePackage, unordered_map<string, vector<double>> P)
 {
     luint half_size = static_cast<luint>(pow(2UL, nQbits - 1));
     luint iterations = static_cast<luint>(ceil(pow(2., static_cast<double>(nQbits - 1) / 2.))) - 1;
@@ -51,7 +45,7 @@ NoisyQuantumSearch::NoisyQuantumSearch(luint nQbits, vector<luint> success, luin
     {
         success_set.push_back(static_cast<luint>(rand()) % half_size);
     }
-    return new NoisyQuantumSearch(nQbits, success_set, iterations, eType, ePackage, epsilon);
+    return new NoisyQuantumSearch(nQbits, success_set, iterations, eType, ePackage, P);
 }
 
 bool NoisyQuantumSearch::oracle(boost::dynamic_bitset<> bitchain)
@@ -91,7 +85,7 @@ bool NoisyQuantumSearch::oracle(luint value)
  * representing `element`. More precisely, for `3` in 4 bits, we have `3 = 0101`, so we would
  * apply a controlled `X` to the 5-th qubit with controls `C(-)C(+)C(-)C(+)`.
  */
-void NoisyQuantumSearch::quantum_oracle(NoisyQuantumComputation &circuit, double epsilon)
+void NoisyQuantumSearch::quantum_oracle(NoisyQuantumComputation &circuit)
 {
     vector<boost::dynamic_bitset<>> success_bitchains = vector<boost::dynamic_bitset<>>(this->success_set.size());
     luint j = 0;
@@ -110,7 +104,7 @@ void NoisyQuantumSearch::quantum_oracle(NoisyQuantumComputation &circuit, double
         }
         auto qc = qc::QuantumComputation(this->size());
         qc.mcx(controls, static_cast<qc::Qubit>(this->size() - 1));
-        circuit.push_back(qc, epsilon);
+        circuit.push_back(qc);
     }
 }
 /**
@@ -125,14 +119,14 @@ void NoisyQuantumSearch::quantum_oracle(NoisyQuantumComputation &circuit, double
  * over the ancillary qubit with negative controls all over other qubits.
  *
  */
-void NoisyQuantumSearch::quantum_diffusion(NoisyQuantumComputation &circuit, double epsilon)
+void NoisyQuantumSearch::quantum_diffusion(NoisyQuantumComputation &circuit)
 {
     // Code taken from mqt-core/algorithms/Grover.cpp
     for (luint i = 1; i < this->size() - 1; ++i)
     {
         auto qc = qc::QuantumComputation(this->size());
         qc.h(static_cast<qc::Qubit>(i));
-        circuit.push_back(qc, epsilon);
+        circuit.push_back(qc);
     }
 
     qc::Controls controls{};
@@ -148,15 +142,15 @@ void NoisyQuantumSearch::quantum_diffusion(NoisyQuantumComputation &circuit, dou
     qc2.mcx(controls, 0);
     qc3.z(0); // X-H-X
 
-    circuit.push_back(qc1, epsilon);
-    circuit.push_back(qc2, epsilon);
-    circuit.push_back(qc3, epsilon);
+    circuit.push_back(qc1);
+    circuit.push_back(qc2);
+    circuit.push_back(qc3);
 
     for (luint i = this->size() - 2; i > 0; --i)
     {
         auto qc = qc::QuantumComputation(this->size());
         qc.h(static_cast<qc::Qubit>(i));
-        circuit.push_back(qc, epsilon);
+        circuit.push_back(qc);
     }
 }
 
@@ -229,13 +223,12 @@ dd::CMat NoisyQuantumSearch::matrix_B(dd::CMat &U)
 }
 qc::QuantumComputation *NoisyQuantumSearch::quantum(double)
 {
-    double epsilon = this->epsilon;
     NoisyQuantumComputation circuit = NoisyQuantumComputation(this->size());
 
-    this->quantum_oracle(circuit, epsilon);
-    this->quantum_diffusion(circuit, epsilon);
+    this->quantum_oracle(circuit);
+    this->quantum_diffusion(circuit);
 
-    return circuit.build_noisy_qc();
+    return circuit.build_noisy_qc(this->P);
 }
 qc::QuantumComputation *NoisyQuantumSearch::quantum_B(double)
 {
@@ -251,7 +244,7 @@ NoisyQuantumSearch *NoisyQuantumSearch::change_exec_type(ExperimentType new_type
         to_copy.push_back(*it);
     }
 
-    return new NoisyQuantumSearch(this->size() - 1, to_copy, this->iterations, new_type, this->package, this->epsilon);
+    return new NoisyQuantumSearch(this->size() - 1, to_copy, this->iterations, new_type, this->package, this->P);
 }
 
 string NoisyQuantumSearch::to_string()
@@ -351,6 +344,30 @@ void NoisyQuantumSearch::run_ddsim_alone()
     return;
 }
 
+/*
+    The implementation uses discrete_distribution which techincally does not need to be given values that sum to 1,
+    because it will be normalised so that it does.
+    Checking for it just in case.
+
+    Can always be removed without causing errors.
+
+    The probabilities in the distribution will be understood as follows:
+        {intended gate, I, X, Y, Z}, the first element is the probability for the intended gate to be applied,
+        the second is the probability for the I gate to be applied, third for X gate and so on.
+*/
+void NoisyQuantumSearch::add_distribution(string type, vector<double> probabilities)
+{
+    auto sum = 0.0;
+
+    for (const auto &prob : probabilities)
+        sum += prob;
+
+    if (sum != 1.0)
+        throw std::runtime_error("The probabilities given does not sum to 1.");
+
+    this->P[type] = probabilities;
+}
+
 string NoisyQuantumSearch::to_csv(char delimiter)
 {
     stringstream stream;
@@ -372,7 +389,7 @@ string NoisyQuantumSearch::to_csv(char delimiter)
            << delimiter
            << this->tot_time
            << delimiter
-           << epsilon
+           << 0 // It's the epsilon value in the csv file, change this to something appropriate
            << delimiter
            << fidelity
            << delimiter

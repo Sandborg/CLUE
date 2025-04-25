@@ -13,7 +13,7 @@
 
 using namespace std;
 
-Experiment *generate_example(string name, luint size, ExperimentType type, string observable, dd::Package<> *package, double epsilon)
+Experiment *generate_example(string name, luint size, ExperimentType type, string observable, dd::Package<> *package, unordered_map<string, vector<double>> distribution)
 {
     string upper = boost::to_upper_copy<std::string>(name);
     if (upper == "SAT")
@@ -26,7 +26,7 @@ Experiment *generate_example(string name, luint size, ExperimentType type, strin
     }
     else if (upper == "SEARCH")
     {
-        return NoisyQuantumSearch::ones_string(size, type, package, epsilon);
+        return NoisyQuantumSearch::ones_string(size, type, package, distribution);
     }
     else
     {
@@ -85,9 +85,8 @@ int main_script(string name, ExperimentType type, luint m, luint M, luint repeat
     for (luint size = m; size <= M; size++)
     { // We repeat for each size.
       // For each size we also go from starting to finishing epsilon values.
-
         double starting = 0.001;
-        double finishing = 1.0;
+        double finishing = 0.002;
         double epsilon = starting;
 
         while (epsilon < finishing)
@@ -154,7 +153,7 @@ int main(int argc, char **argv)
     srand(static_cast<unsigned>(time(NULL)));
     string test = "search";
     ExperimentType type = ExperimentType::DDSIM_ALONE;
-    luint m = 3, M = 9, repeats = 10;
+    luint m = 5, M = 5, repeats = 1;
     string observable = "H";
 
     if (argc > 1)

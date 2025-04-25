@@ -1,4 +1,5 @@
 #include "NoisyQC.hpp"
+#include <random>
 
 NoisyQuantumComputation::NoisyQuantumComputation(luint _nQubits)
 {
@@ -8,7 +9,7 @@ NoisyQuantumComputation::NoisyQuantumComputation(luint _nQubits)
 /*  When we build the noisy qc, we simply add the operation with probability 1-epsilon or else we add the identity gate to the intended target.
     With this implementation, we are also requiring the qc to have only one operation in the layer.
     This is a bit more cumbersome of an implementation, but it allows us to build it in similar fashion to the python implementation.?*/
-qc::QuantumComputation *NoisyQuantumComputation::build_noisy_qc()
+qc::QuantumComputation *NoisyQuantumComputation::build_noisy_qc(const std::unordered_map<std::string, std::vector<double>> &P)
 {
     auto qc = new qc::QuantumComputation(this->nQubits);
 
@@ -16,15 +17,28 @@ qc::QuantumComputation *NoisyQuantumComputation::build_noisy_qc()
     std::random_device rd;
     std::mt19937 gen(rd());
 
-    for (const auto &[layer, epsilon] : this->layers)
+    for (const auto &layer : this->layers)
     {
-        if (std::generate_canonical<double, 10>(gen) > epsilon) // add the layer with probability 1-epsilon. Else do nothing.
+        std::string op_name = layer.front()->getName();
+
+        int gate_idx = std::discrete_distribution(P[op_name]);
+        // std::cerr << layer.front()->getName() << " " << qc::toString(layer.front()->getType()) << std::endl;
+
+        switch (gate_idx)
         {
+        case 0: // the intended gate to be applied
             qc->emplace_back(layer.front()->clone());
-        }
-        else
-        {
-            qc->i(layer.front()->getTargets()[0]); // Apply identity gate to the first target of the operation
+            break;
+        case 1: // The identify gate is applied.
+            qc->i(layer.front()->getTargets()[0]);
+        case 2: // The X (not gate) is applied.
+            qc->x(layer.front()->getTargets()[0]);
+        case 3: // The Y gate is applied.
+            qc->y(layer.front()->getTargets()[0]);
+        case 4: // The Z gate is applied.
+            qc->z(layer.front()->getTargets()[0]);
+        default:
+            break;
         }
     }
 
@@ -38,11 +52,11 @@ qc::QuantumComputation *NoisyQuantumComputation::build_noisy_qc()
     return qc;
 }
 
-qc::QuantumComputation *NoisyQuantumComputation::build_non_noisy_qc()
+qc::QuantumComputation *NoisyQuantumComputation::build_non_noisy_qc(const std::unordered_map<std::string, std::vector<double>> &)
 {
     auto qc = new qc::QuantumComputation(this->nQubits);
 
-    for (const auto &[layer, _] : this->layers)
+    for (const auto &layer : this->layers)
     {
         qc->emplace_back(layer.front()->clone());
     }

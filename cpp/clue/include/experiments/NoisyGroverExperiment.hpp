@@ -18,7 +18,7 @@ class NoisyQuantumSearch : public Experiment
 {
 protected:
     luint qbits;
-    double epsilon;
+    unordered_map<string, vector<double>> P;
     unordered_set<luint> success_set;
     vector<dd::vEdge> succes_states;
     dd::fp fidelity = 0;
@@ -26,8 +26,8 @@ protected:
     /* Method that serves as an oracle for the search function */
     bool oracle(boost::dynamic_bitset<>);
     bool oracle(luint);
-    void quantum_oracle(NoisyQuantumComputation &, double);    // Adds the oracle part to the circuit given as input
-    void quantum_diffusion(NoisyQuantumComputation &, double); // Adds the diffusion operator to the circuit given as input
+    void quantum_oracle(NoisyQuantumComputation &);    // Adds the oracle part to the circuit given as input
+    void quantum_diffusion(NoisyQuantumComputation &); // Adds the diffusion operator to the circuit given as input
 
     /* Overriden methods from Experiment */
     CCSparseVector clue_observable();
@@ -45,10 +45,11 @@ protected:
     void run_ddsim_alone() override;
 
 public:
-    NoisyQuantumSearch(luint, vector<luint>, luint, ExperimentType, dd::Package<> *, double);
+    NoisyQuantumSearch(luint, vector<luint>, luint, ExperimentType, dd::Package<> *, unordered_map<string, vector<double>>);
 
-    static NoisyQuantumSearch *random(luint, ExperimentType, dd::Package<> *, double);
-    static NoisyQuantumSearch *ones_string(luint, ExperimentType, dd::Package<> *, double);
+    static NoisyQuantumSearch *random(luint, ExperimentType, dd::Package<> *, unordered_map<string, vector<double>>);
+    static NoisyQuantumSearch *ones_string(luint, ExperimentType, dd::Package<> *, unordered_map<string, vector<double>>);
+    void add_distribution(string, vector<double>);
     void convert_succes_set_qstate(); // Convert the succes values to a quantum state
 
     string to_csv(char = ',') override;
