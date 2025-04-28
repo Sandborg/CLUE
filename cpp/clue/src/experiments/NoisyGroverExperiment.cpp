@@ -375,12 +375,12 @@ string NoisyQuantumSearch::epsilon_gate_distribution()
     auto it = this->P.begin();
     if (it != this->P.end())
     {
-        stream << "[" << it->first << ": " << it->second[0] << ", i: " << it->second[1] << ", x: " << it->second[2] << ", y: " << it->second[3] << ", z: " << it->second[4] << "]";
+        stream << "[" << it->first << ": " << it->second[0] << " i: " << it->second[1] << " x: " << it->second[2] << " y: " << it->second[3] << " z: " << it->second[4] << "]";
         it++;
     }
     while (it != this->P.end())
     {
-        stream << ", " << "[" << it->first << ": " << it->second[0] << ", i: " << it->second[1] << ", x: " << it->second[2] << ", y: " << it->second[3] << ", z: " << it->second[4] << "]";
+        stream << " " << "[" << it->first << ": " << it->second[0] << " i: " << it->second[1] << " x: " << it->second[2] << " y: " << it->second[3] << " z: " << it->second[4] << "]";
         it++;
     }
     return stream.str();
@@ -411,7 +411,7 @@ string NoisyQuantumSearch::to_csv(char delimiter)
            << delimiter
            << fidelity
            << delimiter
-           << (this->P.empty() ? "[x: 1, i: 0, x: 0, y: 0, z: 0], [h: 1, i: 0, x: 0, y: 0, z: 0], [z: 1, i: 0, x: 0, y: 0, z: 0]" : epsilon_gate_distribution())
+           << (this->P.empty() ? "[x: 1 i: 0 x: 0 y: 0 z: 0] [h: 1 i: 0 x: 0 y: 0 z: 0] [z: 1 i: 0 x: 0 y: 0 z: 0]" : epsilon_gate_distribution())
            << delimiter
            << this->to_string();
 
