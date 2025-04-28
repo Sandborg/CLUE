@@ -51,7 +51,6 @@ map<string, vector<double>> generate_random_grover_distribution(double epsilon)
     int grover_error_gates = 4;
     int total_gates = 5;
     double intended_gate = 1.0 - epsilon;
-    cerr << "intended_gate: " << intended_gate << ", epsilon: " << epsilon << endl;
 
     for (auto &gate : grover_gates)
     {
