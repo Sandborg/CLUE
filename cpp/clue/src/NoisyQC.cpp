@@ -9,7 +9,7 @@ NoisyQuantumComputation::NoisyQuantumComputation(luint _nQubits)
 /*  When we build the noisy qc, we simply add the operation with probability 1-epsilon or else we add the identity gate to the intended target.
     With this implementation, we are also requiring the qc to have only one operation in the layer.
     This is a bit more cumbersome of an implementation, but it allows us to build it in similar fashion to the python implementation.?*/
-qc::QuantumComputation *NoisyQuantumComputation::build_noisy_qc(const std::unordered_map<std::string, std::vector<double>> &P)
+qc::QuantumComputation *NoisyQuantumComputation::build_noisy_qc(std::map<std::string, std::vector<double>> &P)
 {
     auto qc = new qc::QuantumComputation(this->nQubits);
 
@@ -20,10 +20,14 @@ qc::QuantumComputation *NoisyQuantumComputation::build_noisy_qc(const std::unord
     for (const auto &layer : this->layers)
     {
         auto op_name = layer.front()->getName();
-        std::discrete_distribution<> d(P[op_name]);
 
-        int gate_idx = 0;
-        // std::cerr << layer.front()->getName() << " " << qc::toString(layer.front()->getType()) << std::endl;
+        if (P.count(op_name) != 1)
+        {
+            throw std::runtime_error("The gate/operation does not have a distribution.");
+        }
+
+        std::discrete_distribution<> d(P[op_name].begin(), P[op_name].end());
+        int gate_idx = d(gen);
 
         switch (gate_idx)
         {

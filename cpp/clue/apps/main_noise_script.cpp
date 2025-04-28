@@ -13,7 +13,90 @@
 
 using namespace std;
 
-Experiment *generate_example(string name, luint size, ExperimentType type, string observable, dd::Package<> *package, unordered_map<string, vector<double>> distribution)
+vector<string> grover_gates = {"x", "h", "z"};
+
+vector<double> generate_random_bounded_probabilities(int len, double expected_sum)
+{
+    auto distribution = vector<double>(len);
+
+    random_device rd;
+    mt19937 gen(rd());
+
+    auto sum = 0.0;
+    for (auto &x : distribution)
+    {
+        x = gen();
+        sum += x;
+    }
+
+    double factor = expected_sum / sum;
+    for (auto &x : distribution)
+        x *= factor;
+
+    return distribution;
+}
+
+/*
+    In our implementation Grover uses the gates X(the mcx), H and Z, so we have to create for each of these.
+
+    P(H) = {H,I,X,Y,Z}
+    P(X) = {X,I,X,Y,Z}
+    P(Z) = {Z,I,X,Y,Z}
+
+    We use lower case for the gates.
+*/
+map<string, vector<double>> generate_random_grover_distribution(double epsilon)
+{
+    map<string, vector<double>> P;
+    int grover_error_gates = 4;
+    int total_gates = 5;
+    double intended_gate = 1.0 - epsilon;
+    cerr << "intended_gate: " << intended_gate << ", epsilon: " << epsilon << endl;
+
+    for (auto &gate : grover_gates)
+    {
+        vector<double> distribution;
+        distribution.push_back(intended_gate);
+
+        auto error_distribution = generate_random_bounded_probabilities(grover_error_gates, epsilon);
+        for (const auto &x : error_distribution)
+        {
+            distribution.push_back(x);
+        }
+        P[gate] = distribution;
+    }
+
+    return P;
+}
+
+/*
+    Generate a probability distribution for the Grover circuit.
+
+    Given an epsilon value, we create a circuit where the all error gates have the same probability.
+    In our implementation Grover uses the gates X(the mcx), H and Z, so we have to create for each of these.
+
+    P(H) = {H,I,X,Y,Z}
+    P(X) = {X,I,X,Y,Z}
+    P(Z) = {Z,I,X,Y,Z}
+
+    We use lower case for the gates.
+*/
+map<string, vector<double>> generate_uniform_error_gate_distribution(double epsilon)
+{
+    map<string, vector<double>> P;
+
+    double error_gate = epsilon / 4;
+    double intented_gate = 1 - epsilon;
+
+    for (const auto gate : grover_gates)
+    {
+        P[gate] = {intented_gate, error_gate, error_gate, error_gate, error_gate};
+    }
+
+    return P;
+}
+
+Experiment *generate_example(string name, luint size, ExperimentType type, string observable, dd::Package<> *package, double epsilon)
 {
     string upper = boost::to_upper_copy<std::string>(name);
     if (upper == "SAT")
@@ -26,7 +109,8 @@ Experiment *generate_example(string name, luint size, ExperimentType type, strin
     }
     else if (upper == "SEARCH")
     {
-        return NoisyQuantumSearch::ones_string(size, type, package, distribution);
+        auto distribution = generate_random_grover_distribution(epsilon);
+        return NoisyQuantumSearch::ones_string(size, type, package, distribution, epsilon);
     }
     else
     {
@@ -59,26 +143,6 @@ vector<string> generate_observables(string observable, luint size)
     return result;
 }
 
-/*
-    In our implementation Grover uses the gates X(the mcx), H and Z, so we have to create for each of these.
-
-    P(H) = {H,I,X,Y,Z}
-    P(X) = {X,I,X,Y,Z}
-    P(Z) = {Z,I,X,Y,Z}
-
-    We use lower case for the gates.
-*/
-unordered_map<string, vector<double>> generate_grover_distribution()
-{
-    unordered_map<string, vector<double>> P;
-
-    P["x"] = {0.88, 0.05, 0.02, 0.03, 0.02};
-    P["h"] = {0.92, 0.01, 0.02, 0.03, 0.02};
-    P["z"] = {0.96, 0.01, 0.01, 0.01, 0.01};
-
-    return P;
-}
-
 int main_script(string name, ExperimentType type, luint m, luint M, luint repeats, string observable)
 {
     double total_time = 0.;
@@ -104,31 +168,41 @@ int main_script(string name, ExperimentType type, luint m, luint M, luint repeat
 
     for (luint size = m; size <= M; size++)
     { // We repeat for each size.
+      // For each size we also go from starting to finishing epsilon values.
 
-        for (string obs : generate_observables(observable, size))
+        double starting = 0.001;
+        double finishing = 1.0;
+        double epsilon = starting;
+
+        while (epsilon <= finishing)
         {
-            for (luint execution = 1; execution <= repeats; execution++)
-            { // We repeat "repeats" times
-                try
-                {
-                    dd::Package<> *package = new dd::Package<>(size);
-                    Experiment *experiment = generate_example(name, size, type, obs, package, generate_grover_distribution());
-                    cout << "##################################################################################" << endl;
-                    cout << "Generated example\n\t" << experiment->to_string() << endl;
-                    experiment->run();
+            for (string obs : generate_observables(observable, size))
+            {
+                for (luint execution = 1; execution <= repeats; execution++)
+                { // We repeat "repeats" times
+                    try
+                    {
+                        dd::Package<> *package = new dd::Package<>(size);
+                        Experiment *experiment = generate_example(name, size, type, obs, package, epsilon);
+                        cout << "##################################################################################" << endl;
+                        cout << "Generated example\n\t" << experiment->to_string() << endl;
+                        experiment->run();
 
-                    cout << "### -- Finished execution " << execution << "/" << repeats << "(size=" << size << "): took " << experiment->total_time() << "s." << endl;
+                        cout << "### -- Finished execution " << execution << "/" << repeats << "(size=" << size << "): took " << experiment->total_time() << "s." << endl;
 
-                    total_time += experiment->total_time();
-                    out << experiment->to_csv() << endl;
-                    delete experiment;
-                    delete package;
-                }
-                catch (qc::QFRException &e)
-                {
-                    cout << "### -- Error in execution " << execution << "/" << repeats << "(size=" << size << "): " << e.what() << endl;
+                        total_time += experiment->total_time();
+                        out << experiment->to_csv() << endl;
+                        delete experiment;
+                        delete package;
+                    }
+                    catch (qc::QFRException &e)
+                    {
+                        cout << "### -- Error in execution " << execution << "/" << repeats << "(size=" << size << "): " << e.what() << endl;
+                    }
                 }
             }
+
+            epsilon = epsilon + pow(10, floor(log10(epsilon)));
         }
     }
     double average_time = total_time / static_cast<double>((M - m + 1) * repeats);

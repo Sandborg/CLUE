@@ -19,9 +19,9 @@ public:
 
     /* Helper functions*/
     int size() { return this->layers.size(); }
-    luint getNqubits() { return this->nQubits; }                                                          // Number of qubits in the circuit
-    qc::QuantumComputation *build_noisy_qc(const std::unordered_map<std::string, std::vector<double>> &); // Build a noisy quantum circuit based on the epsilon values. Have to return a pointer to match with experiment class.
-    qc::QuantumComputation *build_non_noisy_qc();                                                         // Get the quantum circuit as if no noise is present.
+    luint getNqubits() { return this->nQubits; }                                          // Number of qubits in the circuit
+    qc::QuantumComputation *build_noisy_qc(std::map<std::string, std::vector<double>> &); // Build a noisy quantum circuit based on the epsilon values. Have to return a pointer to match with experiment class.
+    qc::QuantumComputation *build_non_noisy_qc();                                         // Get the quantum circuit as if no noise is present.
 
     /* Add a layer to the Noisy Quantum Computation
        Primary use of the noisy quantum computation. With this implementation we can each gate a specific epsilon value.

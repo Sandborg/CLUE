@@ -1,5 +1,7 @@
 #include <iostream>
 #include <string>
+#include <vector>
+#include <map>
 
 #include "NoisyQC.hpp"
 
@@ -15,7 +17,7 @@ void add_layer_succes(int n, luint qbits)
         auto layer = qc::QuantumComputation(qbits);
         layer.h(0);
         double epsilon = 0.001;
-        nqc.push_back(layer, epsilon);
+        nqc.push_back(layer);
     }
 
     // Throw error if we do not have the expected number of layers
@@ -36,7 +38,7 @@ void add_layer_failure_incorrect_size()
 
     try
     {
-        nqc.push_back(invalid_qc, epsilon);
+        nqc.push_back(invalid_qc);
     }
     catch (std::runtime_error)
     {
@@ -55,7 +57,7 @@ void add_layer_failure_invalid_epsilon()
 
     try
     {
-        nqc.push_back(qc, invalid_epsilon);
+        nqc.push_back(qc);
     }
     catch (std::runtime_error)
     {
@@ -74,7 +76,7 @@ void add_layer_failure_empty_qc()
 
     try
     {
-        nqc.push_back(empty_qc, epsilon);
+        nqc.push_back(empty_qc);
     }
     catch (std::runtime_error)
     {
@@ -94,7 +96,7 @@ void build_non_noisy_circuit(luint qubits)
     {
         auto qc = qc::QuantumComputation(qubits);
         qc.h(i);
-        nqc.push_back(qc, epsilon);
+        nqc.push_back(qc);
     }
 
     // Build the non-noisy circuit
@@ -118,11 +120,16 @@ void build_noisy_circuit(luint qubits)
     {
         auto qc = qc::QuantumComputation(qubits);
         qc.h(i);
-        nqc.push_back(qc, epsilon);
+        nqc.push_back(qc);
     }
 
+    std::map<std::string, std::vector<double>> P;
+
+    P["x"] = {0.88, 0.05, 0.02, 0.03, 0.02};
+    P["h"] = {0.92, 0.01, 0.02, 0.03, 0.02};
+    P["z"] = {0.96, 0.01, 0.01, 0.01, 0.01};
     // Build the noisy circuit
-    auto noisy_qc = nqc.build_noisy_qc();
+    auto noisy_qc = nqc.build_noisy_qc(P);
 
     // Check if the size of the noisy circuit is equal to the number of layers
     if (noisy_qc->size() != nqc.size())

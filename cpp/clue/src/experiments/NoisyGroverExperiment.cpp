@@ -1,9 +1,10 @@
 #include "experiments/NoisyGroverExperiment.hpp"
 
 #include <cstdlib>
+#include <string>
 #include "dd/Simulation.hpp"
 
-NoisyQuantumSearch::NoisyQuantumSearch(luint nQbits, vector<luint> success, luint eIterations, ExperimentType eType, dd::Package<> *ePackage, unordered_map<string, vector<double>> _P) : Experiment("Grover", "H", eIterations, eType, ePackage)
+NoisyQuantumSearch::NoisyQuantumSearch(luint nQbits, vector<luint> success, luint eIterations, ExperimentType eType, dd::Package<> *ePackage, map<string, vector<double>> _P, double _epsilon) : Experiment("Grover", "H", eIterations, eType, ePackage)
 {
     this->qbits = nQbits;
     luint bound = static_cast<luint>(pow(2UL, nQbits - 1));
@@ -19,22 +20,25 @@ NoisyQuantumSearch::NoisyQuantumSearch(luint nQbits, vector<luint> success, luin
         }
     }
 
+    // Checking to 2 decimal precision.
     for (const auto &[k, v] : _P)
     {
-        double sum = 0.0;
+        double sum = 0.00;
         for (const auto &x : v)
         {
             sum += x;
         }
-        if (sum != 1.0)
-            throw std::runtime_error("The probabilities given for " + k + " does not sum to 1.");
+        sum = (round(sum * 100) / 100);
+        if (sum != 1.00)
+            throw std::runtime_error("The probabilities given for " + k + " does not sum to 1, instead sums to: " + std::to_string(sum));
     }
     this->P = _P;
+    this->epsilon = _epsilon;
     // TODO: Check if all distributions in P equal 1.
 }
 
 /*method to instead of having random succes values we search for, we want to use a trivial case of n nQbits - 1 ones*/
-/*static*/ NoisyQuantumSearch *NoisyQuantumSearch::ones_string(luint nQbits, ExperimentType eType, dd::Package<> *ePackage, unordered_map<string, vector<double>> P)
+/*static*/ NoisyQuantumSearch *NoisyQuantumSearch::ones_string(luint nQbits, ExperimentType eType, dd::Package<> *ePackage, map<string, vector<double>> P, double epsilon)
 {
     luint value = static_cast<luint>(pow(2UL, nQbits - 1));
     luint iterations = static_cast<luint>(ceil(pow(2., static_cast<double>(nQbits - 1) / 2.))) - 1;
@@ -42,9 +46,9 @@ NoisyQuantumSearch::NoisyQuantumSearch(luint nQbits, vector<luint> success, luin
     auto success_set = vector<luint>();
     success_set.push_back(value - 1UL);
 
-    return new NoisyQuantumSearch(nQbits, success_set, iterations, eType, ePackage, P);
+    return new NoisyQuantumSearch(nQbits, success_set, iterations, eType, ePackage, P, epsilon);
 }
-/*static*/ NoisyQuantumSearch *NoisyQuantumSearch::random(luint nQbits, ExperimentType eType, dd::Package<> *ePackage, unordered_map<string, vector<double>> P)
+/*static*/ NoisyQuantumSearch *NoisyQuantumSearch::random(luint nQbits, ExperimentType eType, dd::Package<> *ePackage, map<string, vector<double>> P, double epsilon)
 {
     luint half_size = static_cast<luint>(pow(2UL, nQbits - 1));
     luint iterations = static_cast<luint>(ceil(pow(2., static_cast<double>(nQbits - 1) / 2.))) - 1;
@@ -56,7 +60,7 @@ NoisyQuantumSearch::NoisyQuantumSearch(luint nQbits, vector<luint> success, luin
     {
         success_set.push_back(static_cast<luint>(rand()) % half_size);
     }
-    return new NoisyQuantumSearch(nQbits, success_set, iterations, eType, ePackage, P);
+    return new NoisyQuantumSearch(nQbits, success_set, iterations, eType, ePackage, P, epsilon);
 }
 
 bool NoisyQuantumSearch::oracle(boost::dynamic_bitset<> bitchain)
@@ -255,7 +259,7 @@ NoisyQuantumSearch *NoisyQuantumSearch::change_exec_type(ExperimentType new_type
         to_copy.push_back(*it);
     }
 
-    return new NoisyQuantumSearch(this->size() - 1, to_copy, this->iterations, new_type, this->package, this->P);
+    return new NoisyQuantumSearch(this->size() - 1, to_copy, this->iterations, new_type, this->package, this->P, this->epsilon);
 }
 
 string NoisyQuantumSearch::to_string()
@@ -298,14 +302,6 @@ void NoisyQuantumSearch::convert_succes_set_qstate()
     }
 }
 
-dd::fp fid_test(dd::Package<> *package, dd::vEdge dd)
-{
-
-    auto fidelity = package->fidelity(dd, dd);
-
-    return fidelity;
-}
-
 /* Method that simulates a quantum circuit without reduction (only used when this->type == DDSIM_ALONE) */
 void NoisyQuantumSearch::run_ddsim_alone()
 {
@@ -333,14 +329,6 @@ void NoisyQuantumSearch::run_ddsim_alone()
         current = dd::simulate<>(U_B, current, *package);
     }
 
-    /*cerr << "state vector after simulation" << endl;
-    current.printVector();
-    cerr << "the state vector that we are looking for" << endl;
-    this->succes_states[0].printVector();
-
-    // auto fid = fid_test(this->package, current);
-    // cerr << "The fidelity between the state after simulation and itself: " << fid_test << endl;
-    */
     this->fidelity = this->package->fidelity(current, this->succes_states[0]);
     cerr << "The fidelity between the expected state and the result from the simulation: " << this->fidelity << endl;
     clock_t a_iteration = clock();
@@ -387,12 +375,12 @@ string NoisyQuantumSearch::epsilon_gate_distribution()
     auto it = this->P.begin();
     if (it != this->P.end())
     {
-        stream << "(" << it->first << ", " << (1 - it->second[0]) << ")";
+        stream << "[" << it->first << ": " << it->second[0] << ", i: " << it->second[1] << ", x: " << it->second[2] << ", y: " << it->second[3] << ", z: " << it->second[4] << "]";
         it++;
     }
     while (it != this->P.end())
     {
-        stream << ", " << "(" << it->first << ", " << (1 - it->second[0]) << ")";
+        stream << ", " << "[" << it->first << ": " << it->second[0] << ", i: " << it->second[1] << ", x: " << it->second[2] << ", y: " << it->second[3] << ", z: " << it->second[4] << "]";
         it++;
     }
     return stream.str();
@@ -419,9 +407,11 @@ string NoisyQuantumSearch::to_csv(char delimiter)
            << delimiter
            << this->tot_time
            << delimiter
-           << epsilon_gate_distribution()
+           << this->epsilon
            << delimiter
            << fidelity
+           << delimiter
+           << (this->P.empty() ? "[x: 1, i: 0, x: 0, y: 0, z: 0], [h: 1, i: 0, x: 0, y: 0, z: 0], [z: 1, i: 0, x: 0, y: 0, z: 0]" : epsilon_gate_distribution())
            << delimiter
            << this->to_string();
 

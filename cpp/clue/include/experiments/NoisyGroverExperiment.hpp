@@ -18,10 +18,11 @@ class NoisyQuantumSearch : public Experiment
 {
 protected:
     luint qbits;
-    unordered_map<string, vector<double>> P;
+    map<string, vector<double>> P;
     unordered_set<luint> success_set;
     vector<dd::vEdge> succes_states;
     dd::fp fidelity = 0;
+    double epsilon;
 
     /* Method that serves as an oracle for the search function */
     bool oracle(boost::dynamic_bitset<>);
@@ -45,10 +46,10 @@ protected:
     void run_ddsim_alone() override;
 
 public:
-    NoisyQuantumSearch(luint, vector<luint>, luint, ExperimentType, dd::Package<> *, unordered_map<string, vector<double>>);
+    NoisyQuantumSearch(luint, vector<luint>, luint, ExperimentType, dd::Package<> *, map<string, vector<double>>, double);
 
-    static NoisyQuantumSearch *random(luint, ExperimentType, dd::Package<> *, unordered_map<string, vector<double>>);
-    static NoisyQuantumSearch *ones_string(luint, ExperimentType, dd::Package<> *, unordered_map<string, vector<double>>);
+    static NoisyQuantumSearch *random(luint, ExperimentType, dd::Package<> *, map<string, vector<double>>, double);
+    static NoisyQuantumSearch *ones_string(luint, ExperimentType, dd::Package<> *, map<string, vector<double>>, double);
     void add_distribution(string, vector<double>);
     void convert_succes_set_qstate(); // Convert the succes values to a quantum state
     string epsilon_gate_distribution();
