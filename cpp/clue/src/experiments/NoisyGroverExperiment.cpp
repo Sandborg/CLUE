@@ -311,11 +311,6 @@ void NoisyQuantumSearch::run_ddsim_alone()
     dd::vEdge obs = this->dd_observable();
     this->convert_succes_set_qstate();
     double par_value = 1. / (pow(2., static_cast<double>(this->size())) * static_cast<double>(10 * this->iterations));
-    qc::QuantumComputation *U_P = this->quantum(par_value);
-    qc::QuantumComputation *U_B = this->quantum_B(par_value);
-
-    cerr << "Circuit Created:" << endl;
-    cerr << *U_P << endl;
 
     cerr << "+++ Current epsilon distributions: " << this->epsilon_gate_distribution() << endl;
 
@@ -325,8 +320,14 @@ void NoisyQuantumSearch::run_ddsim_alone()
 
     for (luint i = 0; i < this->iterations; i++)
     {
+        qc::QuantumComputation *U_P = this->quantum(par_value);
+        qc::QuantumComputation *U_B = this->quantum_B(par_value);
+        cerr << "Circuit Created:" << endl;
+        cerr << *U_P << endl;
         current = dd::simulate<>(U_P, current, *package);
         current = dd::simulate<>(U_B, current, *package);
+        delete U_P;
+        delete U_B;
     }
 
     this->fidelity = this->package->fidelity(current, this->succes_states[0]);
@@ -338,9 +339,6 @@ void NoisyQuantumSearch::run_ddsim_alone()
     this->red_time = 0.0;
     this->it_time = time_to_double(b_iteration, a_iteration);
     this->tot_time = time_to_double(begin, end);
-
-    delete U_P;
-    delete U_B;
 
     return;
 }
