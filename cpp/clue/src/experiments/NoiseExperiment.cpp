@@ -199,8 +199,8 @@ void NoiseExperiment::run_ddsim_alone()
     {
         qc::QuantumComputation *U_P = this->quantum(par_value);
         qc::QuantumComputation *U_B = this->quantum_B(par_value);
-        cerr << "Circuit Created:" << endl;
-        cerr << *U_P << endl;
+        // cerr << "Circuit Created:" << endl;
+        // cerr << *U_P << endl;
         current = dd::simulate<>(U_P, current, *package);
         current = dd::simulate<>(U_B, current, *package);
         delete U_P;
