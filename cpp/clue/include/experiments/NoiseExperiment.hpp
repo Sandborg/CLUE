@@ -4,6 +4,7 @@
 #include "Linalg.hpp"
 #include "dd/Package.hpp"
 #include "Experiment.hpp"
+#include "NoisyQC.hpp"
 
 using namespace std;
 
@@ -46,11 +47,12 @@ protected:
     virtual NoiseExperiment *change_exec_type(ExperimentType) = 0;
 
     // Protected attributes
-    string name;            // Name of the experiment
-    string observable;      // String representing the observable for the lumping
-    luint iterations;       // Number of iterations to perform in an experiment.
-    ExperimentType type;    // Type of the experiment. Depending on the type, different methods will be run
-    dd::Package<> *package; // dd::Package with the cache information for the size for  whole execution.
+    string name;             // Name of the experiment
+    string observable;       // String representing the observable for the lumping
+    luint iterations;        // Number of iterations to perform in an experiment.
+    ExperimentType type;     // Type of the experiment. Depending on the type, different methods will be run
+    dd::Package<> *package;  // dd::Package with the cache information for the size for  whole execution.
+    NoiseModel *noise_model; // The noise model used to build the circuit with noise applied.
 
     /* Execution attributes */
     bool executed = false;  // Flag indicating if the experiment has been executed or not
@@ -59,7 +61,6 @@ protected:
     double it_time = -1.0;  // Execution time of the iteration.
     double tot_time = -1.0; // Execution time of the iteration.
     double mem_used = -1.0; // Memory usage of the execution
-
     /* The three probabilities that noise is applied
             Example: P1 = depolarization probability
                      P2 = amplitude damping probability
@@ -69,9 +70,6 @@ protected:
             Amplitude Damping = [E_0: 1-P2, E_1: P2] E_0 and E_1 is T1 decoherence eq. 6 in Wille's paper
             Phase Flip        = [I (or nothing): 1-P3, Z: P3] This is the T2 decoherence, eq. 7 in Wille's paper
     */
-    double p_depolarization = 0.0;
-    double p_phaseflip = 0.0;
-    double p_amplitude_damp = 0.0;
     dd::fp fidelity = 0;
 
     // Protected methods
@@ -80,39 +78,26 @@ protected:
     /* Method to get the observable for use with DD */
     virtual dd::vEdge dd_observable(); // TODO Currently not working
 
+private:
     /* Method that runs the CLUE reduction (only used when this->type == CLUE) */
-    virtual void run_clue();
+    void run_clue();
     /* Method that runs the DDSIM reduction (only used when this->type == DDSIM) */
-    virtual void run_ddsim();
+    void run_ddsim();
     /* Method that runs the DIRECT reduction (only used when this->type == DIRECT) */
-    virtual void run_direct();
+    void run_direct();
     /* Method that runs the CLUE reduction (only used when this->type == DDSIM_ALONE) */
-    virtual void run_ddsim_alone();
+    void run_ddsim_alone();
 
 public:
     /** CONSTRUCTORS **/
-    NoiseExperiment(string eName, string eObservable, luint eIterations, ExperimentType eType, dd::Package<> *ePackage, double _p_depolarization, double _p_phaseflip, double _p_amplitude_damp)
+    NoiseExperiment(string eName, string eObservable, luint eIterations, ExperimentType eType, dd::Package<> *ePackage, NoiseModel *eNoiseModel)
     {
         this->name = eName;
         this->observable = eObservable;
         this->iterations = eIterations;
         this->type = eType;
         this->package = ePackage;
-
-        if (_p_depolarization > 1)
-            throw std::logic_error("The probability for depolarization should not be higher than 1, was given" + std::to_string(_p_depolarization));
-        else
-            this->p_depolarization = _p_depolarization;
-
-        if (_p_phaseflip > 1)
-            throw std::logic_error("The probability for depolarization should not be higher than 1, was given" + std::to_string(_p_phaseflip));
-        else
-            this->p_phaseflip = _p_phaseflip;
-
-        if (_p_amplitude_damp > 1)
-            throw std::logic_error("The probability for depolarization should not be higher than 1, was given" + std::to_string(_p_amplitude_damp));
-        else
-            this->p_amplitude_damp = _p_amplitude_damp;
+        this->noise_model = eNoiseModel;
     }
 
     virtual ~NoiseExperiment() = default;
@@ -123,7 +108,7 @@ public:
     /* Method to get the string out of an experiment */
     virtual string to_string() = 0;
     /* Method that generate the CSV row for this experiment */
-    virtual string to_csv(char = ',');
+    string to_csv(char = ',');
     /* Method to get the fidelity between expected result and succes state (might only be useful for Grover?)*/
     virtual dd::fp calc_fidelity(dd::vEdge) = 0;
 

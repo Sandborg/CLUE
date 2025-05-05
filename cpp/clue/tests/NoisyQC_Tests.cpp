@@ -11,7 +11,7 @@ void add_layer_succes(int n, luint qbits)
     double p1 = 0.0;
     double p2 = 0.0;
     double p3 = 0.0;
-    auto nqc = NoisyQuantumComputation(qbits, p1, p2, p3);
+    auto nqc = NoiseModel(qbits, p1, p2, p3);
 
     // Add layers to the Noisy QuantumComputation
     for (int i = 0; i < n; i++)
@@ -36,7 +36,7 @@ void add_layer_failure_incorrect_size()
     double p2 = 0.0;
     double p3 = 0.0;
 
-    auto nqc = NoisyQuantumComputation(nqc_size, p1, p2, p3);
+    auto nqc = NoiseModel(nqc_size, p1, p2, p3);
     auto invalid_qc = qc::QuantumComputation(qc_size);
 
     try
@@ -57,8 +57,8 @@ void invalid_depolarization_probabilities()
 
     try
     {
-        auto nqc1 = NoisyQuantumComputation(3, invalid_probability_pos, 0.0, 0.0);
-        auto nqc2 = NoisyQuantumComputation(3, invalid_probability_neg, 0.0, 0.0);
+        auto nqc1 = NoiseModel(3, invalid_probability_pos, 0.0, 0.0);
+        auto nqc2 = NoiseModel(3, invalid_probability_neg, 0.0, 0.0);
     }
     catch (const std::logic_error)
     {
@@ -74,8 +74,8 @@ void invalid_amplitude_damping_probabilities()
 
     try
     {
-        auto nqc1 = NoisyQuantumComputation(3, 0.0, invalid_probability_pos, 0.0);
-        auto nqc2 = NoisyQuantumComputation(3, 0.0, invalid_probability_pos, 0.0);
+        auto nqc1 = NoiseModel(3, 0.0, invalid_probability_pos, 0.0);
+        auto nqc2 = NoiseModel(3, 0.0, invalid_probability_pos, 0.0);
     }
     catch (const std::logic_error)
     {
@@ -91,8 +91,8 @@ void invalid_phaseflip_probabilities()
 
     try
     {
-        auto nqc1 = NoisyQuantumComputation(3, 0.0, 0.0, invalid_probability_pos);
-        auto nqc2 = NoisyQuantumComputation(3, 0.0, 0.0, invalid_probability_neg);
+        auto nqc1 = NoiseModel(3, 0.0, 0.0, invalid_probability_pos);
+        auto nqc2 = NoiseModel(3, 0.0, 0.0, invalid_probability_neg);
     }
     catch (const std::logic_error)
     {
@@ -106,7 +106,7 @@ void add_layer_failure_invalid_epsilon()
     luint nqc_size = 3;
     double invalid_epsilon = 1.5; // Invalid epsilon value (greater than 1.0)   throw std::runtime_error("Incorrect size of Noisy QC and QC didn't throw error");
 
-    auto nqc = NoisyQuantumComputation(nqc_size, 0.0, 0.0, 0.0);
+    auto nqc = NoiseModel(nqc_size, 0.0, 0.0, 0.0);
     auto qc = qc::QuantumComputation(nqc_size);
 
     try
@@ -125,7 +125,7 @@ void add_layer_failure_empty_qc()
     luint nqc_size = 3;
     double epsilon = 0.01;
 
-    auto nqc = NoisyQuantumComputation(nqc_size, 0.0, 0.0, 0.0);
+    auto nqc = NoiseModel(nqc_size, 0.0, 0.0, 0.0);
     auto empty_qc = qc::QuantumComputation(nqc_size);
 
     try
@@ -143,7 +143,7 @@ void build_non_noisy_circuit(luint qubits)
 {
     double epsilon = 0.01;
 
-    auto nqc = NoisyQuantumComputation(qubits, 0.0, 0.0, 0.0);
+    auto nqc = NoiseModel(qubits, 0.0, 0.0, 0.0);
 
     // Add layers to the Noisy QuantumComputation
     for (int i = 0; i < qubits; i++)

@@ -199,17 +199,17 @@ void NoiseExperiment::run_ddsim_alone()
     {
         qc::QuantumComputation *U_P = this->quantum(par_value);
         qc::QuantumComputation *U_B = this->quantum_B(par_value);
-        // cerr << "Circuit Created:" << endl;
-        // cerr << *U_P << endl;
+        cerr << "Circuit Created:" << endl;
+        cerr << *U_P << endl;
         current = dd::simulate<>(U_P, current, *package);
         current = dd::simulate<>(U_B, current, *package);
         delete U_P;
         delete U_B;
     }
 
+    clock_t a_iteration = clock();
     this->fidelity = this->calc_fidelity(current);
     cerr << "The fidelity between the expected state and the result from the simulation: " << this->fidelity << endl;
-    clock_t a_iteration = clock();
     clock_t end = clock();
 
     // We store the data
@@ -270,11 +270,11 @@ string NoiseExperiment::to_csv(char delimiter)
            << delimiter
            << this->tot_time
            << delimiter
-           << this->p_depolarization
+           << this->noise_model->getDepolarization()
            << delimiter
-           << this->p_amplitude_damp
+           << this->noise_model->getAmpltitudeDamping()
            << delimiter
-           << this->p_phaseflip
+           << this->noise_model->getPhaseFlip()
            << delimiter
            << fidelity
            << delimiter

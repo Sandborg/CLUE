@@ -16,7 +16,7 @@
 
 using namespace std;
 
-NoiseExperiment *generate_example(string name, luint size, ExperimentType type, string observable, dd::Package<> *package, double depolarization_noise, double phaseflip_noise, double amp_damping_noise)
+NoiseExperiment *generate_example(string name, luint size, ExperimentType type, string observable, dd::Package<> *package, NoiseModel *noise_model)
 {
     string upper = boost::to_upper_copy<std::string>(name);
     /*
@@ -47,7 +47,7 @@ NoiseExperiment *generate_example(string name, luint size, ExperimentType type, 
          }
      }
     */
-    auto search = NoisyQuantumSearch::ones_string(size, type, package, depolarization_noise, phaseflip_noise, amp_damping_noise);
+    auto search = NoisyQuantumSearch::ones_string(size, type, package, noise_model);
     search->convert_succes_set_qstate();
     return search;
 }
@@ -113,7 +113,8 @@ int main_script(string name, ExperimentType type, luint m, luint M, luint repeat
                     try
                     {
                         dd::Package<> *package = new dd::Package<>(size);
-                        NoiseExperiment *experiment = generate_example(name, size, type, obs, package, depolarization_noise, phaseflip_noise, amp_damping_noise);
+                        auto noise_model = new NoiseModel(size, depolarization_noise, phaseflip_noise, amp_damping_noise);
+                        NoiseExperiment *experiment = generate_example(name, size, type, obs, package, noise_model);
                         cout << "##################################################################################" << endl;
                         cout << "Generated example\n\t" << experiment->to_string() << endl;
                         cout << "Current Errors: Depolarization: "
@@ -132,6 +133,7 @@ int main_script(string name, ExperimentType type, luint m, luint M, luint repeat
                         out << experiment->to_csv() << endl;
                         delete experiment;
                         delete package;
+                        delete noise_model;
                     }
                     catch (qc::QFRException &e)
                     {

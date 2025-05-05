@@ -4,6 +4,12 @@
 #include "dd/FunctionalityConstruction.hpp"
 #include "dd/Simulation.hpp"
 
+// Auxiliar method to convert time clocks into double time
+double time_to_double(clock_t &init, clock_t &end)
+{
+    return (double(end - init) / double(CLOCKS_PER_SEC));
+}
+
 ExperimentType ExperimentType_fromString(string value)
 {
     string upper = boost::to_upper_copy<std::string>(value);

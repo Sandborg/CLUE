@@ -1,7 +1,7 @@
 #include "NoisyQC.hpp"
 #include <random>
 
-NoisyQuantumComputation::NoisyQuantumComputation(luint _nQubits, double eP1, double eP2, double eP3)
+NoiseModel::NoiseModel(luint _nQubits, double eP1, double eP2, double eP3)
 {
     this->nQubits = _nQubits;
 
@@ -32,9 +32,9 @@ NoisyQuantumComputation::NoisyQuantumComputation(luint _nQubits, double eP1, dou
 
     Step 1 where the gate is applied, step 2 is depolarization, step 3 is T1 decoherence (amplitude damping) and step 4 is T2 decoherence (phase flip)
 */
-qc::QuantumComputation *NoisyQuantumComputation::build_noisy_qc()
+qc::QuantumComputation *NoiseModel::build_noisy_qc(qc::QuantumComputation &qc)
 {
-    auto qc = new qc::QuantumComputation(this->nQubits);
+    auto noisy_qc = new qc::QuantumComputation(this->nQubits);
 
     double I = 1 - ((3 * this->p_depolarization) / 4);
     double X = this->p_depolarization / 4;
@@ -47,29 +47,28 @@ qc::QuantumComputation *NoisyQuantumComputation::build_noisy_qc()
     std::discrete_distribution<> T1_dist({1 - this->p_amplitude_damp, this->p_amplitude_damp});
     std::discrete_distribution<> T2_dist({1 - this->p_phaseflip, this->p_phaseflip});
 
-    for (const auto &layer : this->layers)
+    for (const auto &op : qc)
     {
+
         // Step 1: Compute z1=U*z0, where z0 is the input (meaning we apply the correct gate)
-        qc->emplace_back(layer.front()->clone());
+        noisy_qc->emplace_back(op->clone());
 
-        for (auto target : layer.front()->getTargets())
+        // step 2: Depolarization
+        for (const auto &target : op->getTargets())
         {
-            // int gate_idx = depolarization_dist(gen);
-
-            // step 2: Depolarization
             switch (depolarization_dist(gen))
             {
-            case 0: // the intended gate to be applied
-                qc->i(target);
+            case 0:
+                noisy_qc->i(target);
                 break;
-            case 1: // The X gate is applied.
-                qc->x(target);
+            case 1:
+                noisy_qc->x(target);
                 break;
-            case 2: // The Y (not gate) is applied.
-                qc->y(target);
+            case 2:
+                noisy_qc->y(target);
                 break;
-            case 3: // The Z gate is applied.
-                qc->z(target);
+            case 3:
+                noisy_qc->z(target);
                 break;
             default:
                 break;
@@ -79,10 +78,10 @@ qc::QuantumComputation *NoisyQuantumComputation::build_noisy_qc()
             switch (T1_dist(gen))
             {
             case 0:
-                qc->i(target);
+                noisy_qc->i(target);
                 break;
             case 1:
-                qc->z(target);
+                noisy_qc->z(target);
                 break;
             default:
                 break;
@@ -92,10 +91,10 @@ qc::QuantumComputation *NoisyQuantumComputation::build_noisy_qc()
             switch (T2_dist(gen))
             {
             case 0:
-                qc->i(target);
+                noisy_qc->i(target);
                 break;
             case 1:
-                qc->z(target);
+                noisy_qc->z(target);
                 break;
             default:
                 break;
@@ -103,10 +102,10 @@ qc::QuantumComputation *NoisyQuantumComputation::build_noisy_qc()
         }
     }
 
-    return qc;
+    return noisy_qc;
 }
 
-qc::QuantumComputation *NoisyQuantumComputation::build_non_noisy_qc()
+qc::QuantumComputation *NoiseModel::build_non_noisy_qc()
 {
     auto qc = new qc::QuantumComputation(this->nQubits);
 

@@ -74,14 +74,15 @@ protected:
     /* Method to get the observable for use with DD */
     virtual dd::vEdge dd_observable(); // TODO Currently not working
 
+private:
     /* Method that runs the CLUE reduction (only used when this->type == CLUE) */
-    virtual void run_clue();
+    void run_clue();
     /* Method that runs the DDSIM reduction (only used when this->type == DDSIM) */
-    virtual void run_ddsim();
+    void run_ddsim();
     /* Method that runs the DIRECT reduction (only used when this->type == DIRECT) */
-    virtual void run_direct();
+    void run_direct();
     /* Method that runs the CLUE reduction (only used when this->type == DDSIM_ALONE) */
-    virtual void run_ddsim_alone();
+    void run_ddsim_alone();
 
 public:
     /** CONSTRUCTORS **/
@@ -102,7 +103,7 @@ public:
     /* Method to get the string out of an experiment */
     virtual string to_string() = 0;
     /* Method that generate the CSV row for this experiment */
-    virtual string to_csv(char = ',');
+    string to_csv(char = ',');
 
     /* Method to get the total execution time */
     double total_time() { return this->tot_time; }
@@ -112,11 +113,6 @@ public:
     double reduction_time() { return this->red_time; }
     /* Method to get the total execution time */
     double iteration_time() { return this->it_time; }
-    /* Auxiliar method to convert time clocks into double time */
-    double time_to_double(clock_t &init, clock_t &end)
-    {
-        return (double(end - init) / double(CLOCKS_PER_SEC));
-    }
 };
 
 #endif

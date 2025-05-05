@@ -26,8 +26,8 @@ protected:
     /* Method that serves as an oracle for the search function */
     bool oracle(boost::dynamic_bitset<>);
     bool oracle(luint);
-    void quantum_oracle(NoisyQuantumComputation &);    // Adds the oracle part to the circuit given as input
-    void quantum_diffusion(NoisyQuantumComputation &); // Adds the diffusion operator to the circuit given as input
+    void quantum_oracle(qc::QuantumComputation &);    // Adds the oracle part to the circuit given as input
+    void quantum_diffusion(qc::QuantumComputation &); // Adds the diffusion operator to the circuit given as input
 
     /* Overriden methods from Experiment */
     CCSparseVector clue_observable();
@@ -44,10 +44,10 @@ protected:
     NoisyQuantumSearch *change_exec_type(ExperimentType);
 
 public:
-    NoisyQuantumSearch(luint, vector<luint>, luint, ExperimentType, dd::Package<> *, double, double, double);
+    NoisyQuantumSearch(luint, vector<luint>, luint, ExperimentType, dd::Package<> *, NoiseModel *);
 
-    static NoisyQuantumSearch *random(luint, ExperimentType, dd::Package<> *, double, double, double);
-    static NoisyQuantumSearch *ones_string(luint, ExperimentType, dd::Package<> *, double, double, double);
+    static NoisyQuantumSearch *random(luint, ExperimentType, dd::Package<> *, NoiseModel *);
+    static NoisyQuantumSearch *ones_string(luint, ExperimentType, dd::Package<> *, NoiseModel *);
     void convert_succes_set_qstate(); // Convert the succes values to a quantum state
 
     dd::fp calc_fidelity(dd::vEdge);
