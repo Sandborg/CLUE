@@ -3,6 +3,7 @@
 #include "QuantumComputation.hpp"
 
 typedef long unsigned int luint;
+
 /*************************************************************************/
 
 /* Class for noisy quantum circuits
@@ -11,17 +12,20 @@ class NoisyQuantumComputation
 {
 protected:
     luint nQubits;
+    double p_depolarization = 0.0;
+    double p_phaseflip = 0.0;
+    double p_amplitude_damp = 0.0;
     std::vector<qc::QuantumComputation> layers;
 
 public:
     /* Constructor*/
-    NoisyQuantumComputation(luint);
+    NoisyQuantumComputation(luint, double, double, double);
 
     /* Helper functions*/
     int size() { return this->layers.size(); }
-    luint getNqubits() { return this->nQubits; }                                          // Number of qubits in the circuit
-    qc::QuantumComputation *build_noisy_qc(std::map<std::string, std::vector<double>> &); // Build a noisy quantum circuit based on the epsilon values. Have to return a pointer to match with experiment class.
-    qc::QuantumComputation *build_non_noisy_qc();                                         // Get the quantum circuit as if no noise is present.
+    luint getNqubits() { return this->nQubits; }  // Number of qubits in the circuit
+    qc::QuantumComputation *build_noisy_qc();     // Build a noisy quantum circuit based on the epsilon values. Have to return a pointer to match with experiment class.
+    qc::QuantumComputation *build_non_noisy_qc(); // Get the quantum circuit as if no noise is present.
 
     /* Add a layer to the Noisy Quantum Computation
        Primary use of the noisy quantum computation. With this implementation we can each gate a specific epsilon value.

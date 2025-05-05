@@ -6,122 +6,50 @@
 #include <cstdlib>
 #include <string>
 
+#include <experiments/NoiseExperiment.hpp>
+#include "experiments/NoisyGroverExperiment.hpp"
+/*
 #include "experiments/SATExperiment.hpp"
 #include "experiments/CUTExperiment.hpp"
-#include "experiments/NoisyGroverExperiment.hpp"
 #include "experiments/BenchmarkExperiment.hpp"
+*/
 
 using namespace std;
 
-vector<string> grover_gates = {"x", "h", "z"};
-
-vector<double> generate_random_bounded_probabilities(int len, double expected_sum)
-{
-    auto distribution = vector<double>(len);
-
-    random_device rd;
-    mt19937 gen(rd());
-
-    auto sum = 0.0;
-    for (auto &x : distribution)
-    {
-        x = gen();
-        sum += x;
-    }
-
-    double factor = expected_sum / sum;
-    for (auto &x : distribution)
-        x *= factor;
-
-    return distribution;
-}
-
-/*
-    In our implementation Grover uses the gates X(the mcx), H and Z, so we have to create for each of these.
-
-    P(H) = {H,I,X,Y,Z}
-    P(X) = {X,I,X,Y,Z}
-    P(Z) = {Z,I,X,Y,Z}
-
-    We use lower case for the gates.
-*/
-map<string, vector<double>> generate_random_grover_distribution(double epsilon)
-{
-    map<string, vector<double>> P;
-    int grover_error_gates = 4;
-    int total_gates = 5;
-    double intended_gate = 1.0 - epsilon;
-
-    for (auto &gate : grover_gates)
-    {
-        vector<double> distribution;
-        distribution.push_back(intended_gate);
-
-        auto error_distribution = generate_random_bounded_probabilities(grover_error_gates, epsilon);
-        for (const auto &x : error_distribution)
-        {
-            distribution.push_back(x);
-        }
-        P[gate] = distribution;
-    }
-
-    return P;
-}
-
-/*
-    Generate a probability distribution for the Grover circuit.
-
-    Given an epsilon value, we create a circuit where the all error gates have the same probability.
-    In our implementation Grover uses the gates X(the mcx), H and Z, so we have to create for each of these.
-
-    P(H) = {H,I,X,Y,Z}
-    P(X) = {X,I,X,Y,Z}
-    P(Z) = {Z,I,X,Y,Z}
-
-    We use lower case for the gates.
-*/
-map<string, vector<double>> generate_uniform_error_gate_distribution(double epsilon)
-{
-    map<string, vector<double>> P;
-
-    double error_gate = epsilon / 4;
-    double intented_gate = 1 - epsilon;
-
-    for (const auto gate : grover_gates)
-    {
-        P[gate] = {intented_gate, error_gate, error_gate, error_gate, error_gate};
-    }
-
-    return P;
-}
-
-Experiment *generate_example(string name, luint size, ExperimentType type, string observable, dd::Package<> *package, double epsilon)
+NoiseExperiment *generate_example(string name, luint size, ExperimentType type, string observable, dd::Package<> *package, double depolarization_noise, double phaseflip_noise, double amp_damping_noise)
 {
     string upper = boost::to_upper_copy<std::string>(name);
+    /*
     if (upper == "SAT")
-    {
-        return SATFormula::random(size, static_cast<luint>(rand()) % (2 * size) + size, true, 3UL, type, package);
-    }
-    else if (upper == "MAXCUT")
-    {
-        return UndirectedGraph::random(size, 1. / 3., type, package);
-    }
-    else if (upper == "SEARCH")
-    {
-        auto distribution = generate_random_grover_distribution(epsilon);
-        return NoisyQuantumSearch::ones_string(size, type, package, distribution, epsilon);
-    }
-    else
-    {
-        try
-        {
-            return new BenchmarkExperiment(size, name, observable, type, package);
-        }
-        catch (const domain_error &err)
-        {
-            throw logic_error("The given class of experiments is not recognized.");
-        }
-    }
+     {
+         return SATFormula::random(size, static_cast<luint>(rand()) % (2 * size) + size, true, 3UL, type, package);
+     }
+     else if (upper == "MAXCUT")
+     {
+         return UndirectedGraph::random(size, 1. / 3., type, package);
+     }
+     else if (upper == "SEARCH")
+     {
+         auto distribution = generate_random_grover_distribution(epsilon);
+         auto search = NoisyQuantumSearch::ones_string(size, type, package, distribution, epsilon);
+         search->convert_succes_set_qstate();
+         return search;
+     }
+     else
+     {
+         try
+         {
+             return new BenchmarkExperiment(size, name, observable, type, package);
+         }
+         catch (const domain_error &err)
+         {
+             throw logic_error("The given class of experiments is not recognized.");
+         }
+     }
+    */
+    auto search = NoisyQuantumSearch::ones_string(size, type, package, depolarization_noise, phaseflip_noise, amp_damping_noise);
+    search->convert_succes_set_qstate();
+    return search;
 }
 
 vector<string> generate_observables(string observable, luint size)
@@ -171,10 +99,13 @@ int main_script(string name, ExperimentType type, luint m, luint M, luint repeat
 
         double starting = 0.001;
         double finishing = 1.0;
-        double epsilon = starting;
+        double depolarization_noise = starting;
+        double phaseflip_noise = 0.1;
+        double amp_damping_noise = 0.2;
 
-        while (epsilon <= finishing)
+        while (depolarization_noise <= finishing)
         {
+
             for (string obs : generate_observables(observable, size))
             {
                 for (luint execution = 1; execution <= repeats; execution++)
@@ -182,9 +113,17 @@ int main_script(string name, ExperimentType type, luint m, luint M, luint repeat
                     try
                     {
                         dd::Package<> *package = new dd::Package<>(size);
-                        Experiment *experiment = generate_example(name, size, type, obs, package, epsilon);
+                        NoiseExperiment *experiment = generate_example(name, size, type, obs, package, depolarization_noise, phaseflip_noise, amp_damping_noise);
                         cout << "##################################################################################" << endl;
                         cout << "Generated example\n\t" << experiment->to_string() << endl;
+                        cout << "Current Errors: Depolarization: "
+                             << depolarization_noise
+                             << ", Amplitude Damping: "
+                             << amp_damping_noise
+                             << ", Phase flip: "
+                             << phaseflip_noise
+                             << endl;
+
                         experiment->run();
 
                         cout << "### -- Finished execution " << execution << "/" << repeats << "(size=" << size << "): took " << experiment->total_time() << "s." << endl;
@@ -200,8 +139,7 @@ int main_script(string name, ExperimentType type, luint m, luint M, luint repeat
                     }
                 }
             }
-
-            epsilon = epsilon + pow(10, floor(log10(epsilon)));
+            depolarization_noise = depolarization_noise + pow(10, floor(log10(depolarization_noise)));
         }
     }
     double average_time = total_time / static_cast<double>((M - m + 1) * repeats);

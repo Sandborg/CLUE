@@ -1,63 +1,108 @@
 #include "NoisyQC.hpp"
 #include <random>
 
-NoisyQuantumComputation::NoisyQuantumComputation(luint _nQubits)
+NoisyQuantumComputation::NoisyQuantumComputation(luint _nQubits, double eP1, double eP2, double eP3)
 {
     this->nQubits = _nQubits;
+
+    if (eP1 > 1 or eP1 < 0)
+        throw std::logic_error("The probability for depolarization should not be higher than 1 nor lower than 0, was given" + std::to_string(eP1));
+    else
+        this->p_depolarization = eP1;
+
+    if (eP2 > 1 or eP2 < 0)
+        throw std::logic_error("The probability for depolarization should not be higher than 1 nor lower than 0, was given" + std::to_string(eP2));
+    else
+        this->p_phaseflip = eP2;
+
+    if (eP3 > 1 or eP3 < 0)
+        throw std::logic_error("The probability for depolarization should not be higher than 1 nor lower than 0, was given" + std::to_string(eP3));
+    else
+        this->p_amplitude_damp = eP3;
 }
 
-/*  When we build the noisy qc, we simply add the operation with probability 1-epsilon or else we add the identity gate to the intended target.
-    With this implementation, we are also requiring the qc to have only one operation in the layer.
-    This is a bit more cumbersome of an implementation, but it allows us to build it in similar fashion to the python implementation.?*/
-qc::QuantumComputation *NoisyQuantumComputation::build_noisy_qc(std::map<std::string, std::vector<double>> &P)
+/*  We apply all three error typos but in sequence. Specifically, assume we have a one-qubit gate U and let us fix the probabilities p, p_1, p_2.
+    Then, the noisy version of U is modelled via the following random experiment:
+
+    Steps:
+    1. Compute z1=U*z0, where z0 is the input (meaning we apply the correct gate)
+    2. Set z2=z1 with probability 1-3p (identity), set z2=X*z1 with probability p, set z2=Y*z1 with probability p, set z2=Z*z1 with probability p.
+    3. Set z3=E_0*z2 with probability 1-p1, set z3=E_1*z2 with probability p1 (T1 decoherence, Eq. 6 in Wille's paper).
+    4. Set z4=z3 with probability 1-p2, set z4=Z*z3 with probability p2 (T2 decoherence, Eq. 7 in Wille's paper --- the one with the typo).
+
+    Step 1 where the gate is applied, step 2 is depolarization, step 3 is T1 decoherence (amplitude damping) and step 4 is T2 decoherence (phase flip)
+*/
+qc::QuantumComputation *NoisyQuantumComputation::build_noisy_qc()
 {
     auto qc = new qc::QuantumComputation(this->nQubits);
 
-    // Generate random number between [0,1)
+    double I = 1 - ((3 * this->p_depolarization) / 4);
+    double X = this->p_depolarization / 4;
+    double Y = this->p_depolarization / 4;
+    double Z = this->p_depolarization / 4;
+
     std::random_device rd;
     std::mt19937 gen(rd());
+    std::discrete_distribution<> depolarization_dist({I, X, Y, Z});
+    std::discrete_distribution<> T1_dist({1 - this->p_amplitude_damp, this->p_amplitude_damp});
+    std::discrete_distribution<> T2_dist({1 - this->p_phaseflip, this->p_phaseflip});
 
     for (const auto &layer : this->layers)
     {
-        auto op_name = layer.front()->getName();
+        // Step 1: Compute z1=U*z0, where z0 is the input (meaning we apply the correct gate)
+        qc->emplace_back(layer.front()->clone());
 
-        if (P.count(op_name) != 1)
+        for (auto target : layer.front()->getTargets())
         {
-            throw std::runtime_error("The gate/operation does not have a distribution.");
-        }
+            // int gate_idx = depolarization_dist(gen);
 
-        std::discrete_distribution<> d(P[op_name].begin(), P[op_name].end());
-        int gate_idx = d(gen);
+            // step 2: Depolarization
+            switch (depolarization_dist(gen))
+            {
+            case 0: // the intended gate to be applied
+                qc->i(target);
+                break;
+            case 1: // The X gate is applied.
+                qc->x(target);
+                break;
+            case 2: // The Y (not gate) is applied.
+                qc->y(target);
+                break;
+            case 3: // The Z gate is applied.
+                qc->z(target);
+                break;
+            default:
+                break;
+            }
 
-        switch (gate_idx)
-        {
-        case 0: // the intended gate to be applied
-            qc->emplace_back(layer.front()->clone());
-            break;
-        case 1: // The I gate is applied.
-            qc->i(layer.front()->getTargets()[0]);
-            break;
-        case 2: // The X (not gate) is applied.
-            qc->x(layer.front()->getTargets()[0]);
-            break;
-        case 3: // The Y gate is applied.
-            qc->y(layer.front()->getTargets()[0]);
-            break;
-        case 4: // The Z gate is applied.
-            qc->z(layer.front()->getTargets()[0]);
-            break;
-        default:
-            break;
+            // step 3: T1 decoherene (amplitude damping) **NOT THE CORRECT GATES**
+            switch (T1_dist(gen))
+            {
+            case 0:
+                qc->i(target);
+                break;
+            case 1:
+                qc->z(target);
+                break;
+            default:
+                break;
+            }
+
+            // step 4: T2 decoherence (phase flip)
+            switch (T2_dist(gen))
+            {
+            case 0:
+                qc->i(target);
+                break;
+            case 1:
+                qc->z(target);
+                break;
+            default:
+                break;
+            }
         }
     }
 
-    /*
-    std::cerr << "Built the following circuit based on the given epsilon values: \n"
-              << *qc
-              << "The circuit without noise: \n"
-              << this->build_non_noisy_qc()
-              << std::endl;
-    */
     return qc;
 }
 

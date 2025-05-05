@@ -4,7 +4,7 @@
 #include <string>
 #include "dd/Simulation.hpp"
 
-NoisyQuantumSearch::NoisyQuantumSearch(luint nQbits, vector<luint> success, luint eIterations, ExperimentType eType, dd::Package<> *ePackage, map<string, vector<double>> _P, double _epsilon) : Experiment("Grover", "H", eIterations, eType, ePackage)
+NoisyQuantumSearch::NoisyQuantumSearch(luint nQbits, vector<luint> success, luint eIterations, ExperimentType eType, dd::Package<> *ePackage, double _p_depolarization, double _p_phaseflip, double _p_amplitude_damp) : NoiseExperiment("Grover", "H", eIterations, eType, ePackage, _p_depolarization, _p_phaseflip, _p_amplitude_damp)
 {
     this->qbits = nQbits;
     luint bound = static_cast<luint>(pow(2UL, nQbits - 1));
@@ -19,26 +19,10 @@ NoisyQuantumSearch::NoisyQuantumSearch(luint nQbits, vector<luint> success, luin
             this->success_set.insert(el);
         }
     }
-
-    // Checking to 2 decimal precision.
-    for (const auto &[k, v] : _P)
-    {
-        double sum = 0.00;
-        for (const auto &x : v)
-        {
-            sum += x;
-        }
-        sum = (round(sum * 100) / 100);
-        if (sum != 1.00)
-            throw std::runtime_error("The probabilities given for " + k + " does not sum to 1, instead sums to: " + std::to_string(sum));
-    }
-    this->P = _P;
-    this->epsilon = _epsilon;
-    // TODO: Check if all distributions in P equal 1.
 }
 
 /*method to instead of having random succes values we search for, we want to use a trivial case of n nQbits - 1 ones*/
-/*static*/ NoisyQuantumSearch *NoisyQuantumSearch::ones_string(luint nQbits, ExperimentType eType, dd::Package<> *ePackage, map<string, vector<double>> P, double epsilon)
+/*static*/ NoisyQuantumSearch *NoisyQuantumSearch::ones_string(luint nQbits, ExperimentType eType, dd::Package<> *ePackage, double P1, double P2, double P3)
 {
     luint value = static_cast<luint>(pow(2UL, nQbits - 1));
     luint iterations = static_cast<luint>(ceil(pow(2., static_cast<double>(nQbits - 1) / 2.))) - 1;
@@ -46,9 +30,9 @@ NoisyQuantumSearch::NoisyQuantumSearch(luint nQbits, vector<luint> success, luin
     auto success_set = vector<luint>();
     success_set.push_back(value - 1UL);
 
-    return new NoisyQuantumSearch(nQbits, success_set, iterations, eType, ePackage, P, epsilon);
+    return new NoisyQuantumSearch(nQbits, success_set, iterations, eType, ePackage, P1, P2, P3);
 }
-/*static*/ NoisyQuantumSearch *NoisyQuantumSearch::random(luint nQbits, ExperimentType eType, dd::Package<> *ePackage, map<string, vector<double>> P, double epsilon)
+/*static*/ NoisyQuantumSearch *NoisyQuantumSearch::random(luint nQbits, ExperimentType eType, dd::Package<> *ePackage, double P1, double P2, double P3)
 {
     luint half_size = static_cast<luint>(pow(2UL, nQbits - 1));
     luint iterations = static_cast<luint>(ceil(pow(2., static_cast<double>(nQbits - 1) / 2.))) - 1;
@@ -60,7 +44,7 @@ NoisyQuantumSearch::NoisyQuantumSearch(luint nQbits, vector<luint> success, luin
     {
         success_set.push_back(static_cast<luint>(rand()) % half_size);
     }
-    return new NoisyQuantumSearch(nQbits, success_set, iterations, eType, ePackage, P, epsilon);
+    return new NoisyQuantumSearch(nQbits, success_set, iterations, eType, ePackage, P1, P2, P3);
 }
 
 bool NoisyQuantumSearch::oracle(boost::dynamic_bitset<> bitchain)
@@ -238,12 +222,12 @@ dd::CMat NoisyQuantumSearch::matrix_B(dd::CMat &U)
 }
 qc::QuantumComputation *NoisyQuantumSearch::quantum(double)
 {
-    NoisyQuantumComputation circuit = NoisyQuantumComputation(this->size());
+    NoisyQuantumComputation circuit = NoisyQuantumComputation(this->size(), this->p_depolarization, this->p_phaseflip, this->p_amplitude_damp);
 
     this->quantum_oracle(circuit);
     this->quantum_diffusion(circuit);
 
-    return circuit.build_noisy_qc(this->P);
+    return circuit.build_noisy_qc();
 }
 qc::QuantumComputation *NoisyQuantumSearch::quantum_B(double)
 {
@@ -259,7 +243,7 @@ NoisyQuantumSearch *NoisyQuantumSearch::change_exec_type(ExperimentType new_type
         to_copy.push_back(*it);
     }
 
-    return new NoisyQuantumSearch(this->size() - 1, to_copy, this->iterations, new_type, this->package, this->P, this->epsilon);
+    return new NoisyQuantumSearch(this->size() - 1, to_copy, this->iterations, new_type, this->package, this->p_depolarization, this->p_phaseflip, this->p_amplitude_damp);
 }
 
 string NoisyQuantumSearch::to_string()
@@ -302,116 +286,7 @@ void NoisyQuantumSearch::convert_succes_set_qstate()
     }
 }
 
-/* Method that simulates a quantum circuit without reduction (only used when this->type == DDSIM_ALONE) */
-void NoisyQuantumSearch::run_ddsim_alone()
+dd::fp NoisyQuantumSearch::calc_fidelity(dd::vEdge result)
 {
-    cerr << "+++ [ddsim-only @ " << this->name << "] Computing DDSIM ONLY execution for " << this->name << endl;
-    clock_t begin = clock();
-    cerr << "+++ [ddsim-only @ " << this->name << "] Setting up observable (" << this->observable << ") and system..." << endl;
-    dd::vEdge obs = this->dd_observable();
-    this->convert_succes_set_qstate();
-    double par_value = 1. / (pow(2., static_cast<double>(this->size())) * static_cast<double>(10 * this->iterations));
-
-    cerr << "+++ Current epsilon distributions: " << this->epsilon_gate_distribution() << endl;
-
-    cerr << "+++ [ddsim-only @ " << this->name << "] Computing the iteration (U_P*U_B)^iterations..." << endl;
-    clock_t b_iteration = clock();
-    dd::vEdge current = obs; // We create a new vector for the current
-
-    for (luint i = 0; i < this->iterations; i++)
-    {
-        qc::QuantumComputation *U_P = this->quantum(par_value);
-        qc::QuantumComputation *U_B = this->quantum_B(par_value);
-        cerr << "Circuit Created:" << endl;
-        cerr << *U_P << endl;
-        current = dd::simulate<>(U_P, current, *package);
-        current = dd::simulate<>(U_B, current, *package);
-        delete U_P;
-        delete U_B;
-    }
-
-    this->fidelity = this->package->fidelity(current, this->succes_states[0]);
-    cerr << "The fidelity between the expected state and the result from the simulation: " << this->fidelity << endl;
-    clock_t a_iteration = clock();
-    clock_t end = clock();
-
-    // We store the data
-    this->red_time = 0.0;
-    this->it_time = time_to_double(b_iteration, a_iteration);
-    this->tot_time = time_to_double(begin, end);
-
-    return;
-}
-
-/*
-    The implementation uses discrete_distribution which techincally does not need to be given values that sum to 1,
-    because it will be normalised so that it does.
-    Checking for it just in case.
-
-    Can always be removed without causing errors.
-
-    The probabilities in the distribution will be understood as follows:
-        {intended gate, I, X, Y, Z}, the first element is the probability for the intended gate to be applied,
-        the second is the probability for the I gate to be applied, third for X gate and so on.
-*/
-void NoisyQuantumSearch::add_distribution(string type, vector<double> probabilities)
-{
-    auto sum = 0.0;
-
-    for (const auto &prob : probabilities)
-        sum += prob;
-
-    if (sum != 1.0)
-        throw std::runtime_error("The probabilities given does not sum to 1.");
-
-    this->P[type] = probabilities;
-}
-
-string NoisyQuantumSearch::epsilon_gate_distribution()
-{
-    stringstream stream;
-    auto it = this->P.begin();
-    if (it != this->P.end())
-    {
-        stream << "[" << it->first << ": " << it->second[0] << " i: " << it->second[1] << " x: " << it->second[2] << " y: " << it->second[3] << " z: " << it->second[4] << "]";
-        it++;
-    }
-    while (it != this->P.end())
-    {
-        stream << " " << "[" << it->first << ": " << it->second[0] << " i: " << it->second[1] << " x: " << it->second[2] << " y: " << it->second[3] << " z: " << it->second[4] << "]";
-        it++;
-    }
-    return stream.str();
-}
-
-string NoisyQuantumSearch::to_csv(char delimiter)
-{
-    stringstream stream;
-    stream << this->size()
-           << delimiter
-           << this->bound_size()
-           << delimiter
-           << this->name
-           << delimiter
-           << this->observable
-           << delimiter
-           << this->red_time
-           << delimiter
-           << this->red_ratio
-           << delimiter
-           << this->iterations
-           << delimiter
-           << this->it_time
-           << delimiter
-           << this->tot_time
-           << delimiter
-           << this->epsilon
-           << delimiter
-           << fidelity
-           << delimiter
-           << (this->P.empty() ? "[x: 1 i: 0 x: 0 y: 0 z: 0] [h: 1 i: 0 x: 0 y: 0 z: 0] [z: 1 i: 0 x: 0 y: 0 z: 0]" : epsilon_gate_distribution())
-           << delimiter
-           << this->to_string();
-
-    return stream.str();
+    return this->package->fidelity(result, this->succes_states[0]);
 }
