@@ -48,7 +48,7 @@ qc::QuantumComputation *NoiseModel::build_noisy_qc(qc::QuantumComputation &qc)
 
     for (const auto &op : qc)
     {
-
+      
         // Step 1: Compute z1=U*z0, where z0 is the input (meaning we apply the correct gate)
         noisy_qc->emplace_back(op->clone());
 
