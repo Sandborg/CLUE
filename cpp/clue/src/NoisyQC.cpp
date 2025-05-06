@@ -6,17 +6,17 @@ NoiseModel::NoiseModel(luint _nQubits, double eP1, double eP2, double eP3)
     this->nQubits = _nQubits;
 
     if (eP1 > 1 or eP1 < 0)
-        throw std::logic_error("The probability for depolarization should not be higher than 1 nor lower than 0, was given" + std::to_string(eP1));
+        throw std::logic_error("The probability for depolarization should not be higher than 1 nor lower than 0, was given " + std::to_string(eP1));
     else
         this->p_depolarization = eP1;
 
     if (eP2 > 1 or eP2 < 0)
-        throw std::logic_error("The probability for depolarization should not be higher than 1 nor lower than 0, was given" + std::to_string(eP2));
+        throw std::logic_error("The probability for depolarization should not be higher than 1 nor lower than 0, was given " + std::to_string(eP2));
     else
         this->p_phaseflip = eP2;
 
     if (eP3 > 1 or eP3 < 0)
-        throw std::logic_error("The probability for depolarization should not be higher than 1 nor lower than 0, was given" + std::to_string(eP3));
+        throw std::logic_error("The probability for depolarization should not be higher than 1 nor lower than 0, was given " + std::to_string(eP3));
     else
         this->p_amplitude_damp = eP3;
 }
@@ -103,16 +103,4 @@ qc::QuantumComputation *NoiseModel::build_noisy_qc(qc::QuantumComputation &qc)
     }
 
     return noisy_qc;
-}
-
-qc::QuantumComputation *NoiseModel::build_non_noisy_qc()
-{
-    auto qc = new qc::QuantumComputation(this->nQubits);
-
-    for (const auto &layer : this->layers)
-    {
-        qc->emplace_back(layer.front()->clone());
-    }
-
-    return qc;
 }

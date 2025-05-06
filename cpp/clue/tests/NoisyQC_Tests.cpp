@@ -5,164 +5,114 @@
 
 #include "NoisyQC.hpp"
 
-// Test if a layer is added to the noisy_qc currectly with the push_back function
-void add_layer_succes(int n, luint qbits)
+void failure_noise_model_build_invalid_depolarization()
 {
-    double p1 = 0.0;
-    double p2 = 0.0;
-    double p3 = 0.0;
-    auto nqc = NoiseModel(qbits, p1, p2, p3);
-
-    // Add layers to the Noisy QuantumComputation
-    for (int i = 0; i < n; i++)
-    {
-        auto layer = qc::QuantumComputation(qbits);
-        layer.h(0);
-        nqc.push_back(layer);
-    }
-
-    // Throw error if we do not have the expected number of layers
-    if (nqc.size() != n)
-    {
-        throw std::runtime_error("The noisy quantum computation layers did not get added currectly. Expected " + std::to_string(n) + " got " + std::to_string(nqc.size()));
-    }
-}
-
-void add_layer_failure_incorrect_size()
-{
-    luint nqc_size = 3;
-    luint qc_size = 4;
-    double p1 = 0.0;
-    double p2 = 0.0;
-    double p3 = 0.0;
-
-    auto nqc = NoiseModel(nqc_size, p1, p2, p3);
-    auto invalid_qc = qc::QuantumComputation(qc_size);
+    luint size = 3;
+    double invalid_depolarization_above = 1.1;  // Invalid epsilon value (greater than 1.0)   throw std::runtime_error("Incorrect size of Noisy QC and QC didn't throw error");
+    double invalid_depolarization_below = -0.1; // Invalid epsilon value (greater than 1.0)   throw std::runtime_error("Incorrect size of Noisy QC and QC didn't throw error");
 
     try
     {
-        nqc.push_back(invalid_qc);
+        auto nqc_above = NoiseModel(size, invalid_depolarization_above, 0.0, 0.0);
     }
-    catch (std::runtime_error)
+    catch (const std::logic_error &e)
     {
-        return;
+        try
+        {
+            auto nqc_below = NoiseModel(size, invalid_depolarization_below, 0.0, 0.0);
+        }
+        catch (const std::logic_error &e)
+        {
+            return;
+        }
+        throw std::runtime_error("Expected logic_error was not thrown for invalid invalid depolarization value below 0.");
     }
-    throw std::runtime_error("Expected runtime_error was not thrown for mismatched sizes.");
+    throw std::runtime_error("Expected logic_error was not thrown for invalid invalid depolarization value above 1.");
 }
 
-void invalid_depolarization_probabilities()
+void failure_noise_model_build_invalid_T1()
 {
-    double invalid_probability_pos = 1.1;
-    double invalid_probability_neg = -0.5;
+    luint size = 3;
+    double invalid_T1_above = 1.1;  // Invalid epsilon value (greater than 1.0)   throw std::runtime_error("Incorrect size of Noisy QC and QC didn't throw error");
+    double invalid_T1_below = -0.1; // Invalid epsilon value (greater than 1.0)   throw std::runtime_error("Incorrect size of Noisy QC and QC didn't throw error");
 
     try
     {
-        auto nqc1 = NoiseModel(3, invalid_probability_pos, 0.0, 0.0);
-        auto nqc2 = NoiseModel(3, invalid_probability_neg, 0.0, 0.0);
+        auto nqc_above = NoiseModel(size, 0.0, invalid_T1_above, 0.0);
     }
-    catch (const std::logic_error)
+    catch (const std::logic_error &e)
     {
-        return;
+        try
+        {
+            auto nqc_below = NoiseModel(size, 0.0, invalid_T1_below, 0.0);
+        }
+        catch (const std::logic_error &e)
+        {
+            return;
+        }
+        throw std::runtime_error("Expected logic_error was not thrown for invalid invalid T1 value below 0.");
     }
-    throw std::runtime_error("A wrong depolarization probability was not caught");
+    throw std::runtime_error("Expected logic_error was not thrown for invalid invalid T1 value above 1.");
 }
 
-void invalid_amplitude_damping_probabilities()
+void failure_noise_model_build_invalid_T2()
 {
-    double invalid_probability_pos = 1.1;
-    double invalid_probability_neg = -0.5;
+    luint size = 3;
+    double invalid_T2_above = 1.1;  // Invalid epsilon value (greater than 1.0)   throw std::runtime_error("Incorrect size of Noisy QC and QC didn't throw error");
+    double invalid_T2_below = -0.1; // Invalid epsilon value (greater than 1.0)   throw std::runtime_error("Incorrect size of Noisy QC and QC didn't throw error");
 
     try
     {
-        auto nqc1 = NoiseModel(3, 0.0, invalid_probability_pos, 0.0);
-        auto nqc2 = NoiseModel(3, 0.0, invalid_probability_pos, 0.0);
+        auto nqc_above = NoiseModel(size, 0.0, 0.0, invalid_T2_above);
     }
-    catch (const std::logic_error)
+    catch (const std::logic_error &e)
     {
-        return;
+        try
+        {
+            auto nqc_below = NoiseModel(size, 0.0, 0.0, invalid_T2_below);
+        }
+        catch (const std::logic_error &e)
+        {
+            return;
+        }
+        throw std::runtime_error("Expected logic_error was not thrown for invalid invalid T2 value below 0.");
     }
-    throw std::runtime_error("A wrong amplitude damping probability was not caught");
+    throw std::runtime_error("Expected logic_error was not thrown for invalid invalid T2 value above 1.");
 }
 
-void invalid_phaseflip_probabilities()
+void build_circuit()
 {
-    double invalid_probability_pos = 1.1;
-    double invalid_probability_neg = -0.5;
+    luint size = 3;
 
-    try
+    // build circuit to make noisy
+    auto qc = qc::QuantumComputation(size);
+    qc.h(0);
+    qc.x(1);
+    qc.y(2);
+    qc.h(0);
+
+    // build noise model
+    double depolarization = 0.1;
+    double T1 = 0.2;
+    double T2 = 0.1;
+    auto noise_model = NoiseModel(size, depolarization, T1, T2);
+
+    // check current size, should be number of targets in qc ops * 4
+    auto nqc = noise_model.build_noisy_qc(qc);
+
+    luint n_targets = 0;
+    for (auto &op : qc)
+        n_targets += op->getNtargets();
+
+    luint expected_size = n_targets * 4;
+
+    if (expected_size != nqc->size())
     {
-        auto nqc1 = NoiseModel(3, 0.0, 0.0, invalid_probability_pos);
-        auto nqc2 = NoiseModel(3, 0.0, 0.0, invalid_probability_neg);
+        throw std::runtime_error("The built circuit does not have the currect size, expected: " + std::to_string(expected_size) + ", built: " + std::to_string(nqc->size()));
     }
-    catch (const std::logic_error)
-    {
-        return;
-    }
-    throw std::runtime_error("A wrong phase flip probability was not caught");
+
+    return;
 }
-
-void add_layer_failure_invalid_epsilon()
-{
-    luint nqc_size = 3;
-    double invalid_epsilon = 1.5; // Invalid epsilon value (greater than 1.0)   throw std::runtime_error("Incorrect size of Noisy QC and QC didn't throw error");
-
-    auto nqc = NoiseModel(nqc_size, 0.0, 0.0, 0.0);
-    auto qc = qc::QuantumComputation(nqc_size);
-
-    try
-    {
-        nqc.push_back(qc);
-    }
-    catch (std::runtime_error)
-    {
-        return;
-    }
-    throw std::runtime_error("Expected runtime_error was not thrown for invalid epsilon.");
-}
-
-void add_layer_failure_empty_qc()
-{
-    luint nqc_size = 3;
-    double epsilon = 0.01;
-
-    auto nqc = NoiseModel(nqc_size, 0.0, 0.0, 0.0);
-    auto empty_qc = qc::QuantumComputation(nqc_size);
-
-    try
-    {
-        nqc.push_back(empty_qc);
-    }
-    catch (std::runtime_error)
-    {
-        return;
-    }
-    throw std::runtime_error("Expected runtime_error was not thrown for empty quantum circuit.");
-}
-
-void build_non_noisy_circuit(luint qubits)
-{
-    double epsilon = 0.01;
-
-    auto nqc = NoiseModel(qubits, 0.0, 0.0, 0.0);
-
-    // Add layers to the Noisy QuantumComputation
-    for (int i = 0; i < qubits; i++)
-    {
-        auto qc = qc::QuantumComputation(qubits);
-        qc.h(i);
-        nqc.push_back(qc);
-    }
-
-    // Build the non-noisy circuit
-    auto non_noisy_qc = nqc.build_non_noisy_qc();
-
-    // Check if the size of the non-noisy circuit is equal to the number of layers
-    if (non_noisy_qc->size() != nqc.size())
-    {
-        throw std::runtime_error("The size of the non-noisy circuit does not match the number of layers.");
-    }
-}
-
 /*
     Need to figure out how to test this.
     void build_noisy_circuit(luint qubits)
@@ -197,15 +147,10 @@ void build_non_noisy_circuit(luint qubits)
 
 int main()
 {
-    add_layer_succes(3, 3);
-    add_layer_failure_incorrect_size();
-    add_layer_failure_invalid_epsilon();
-    add_layer_failure_empty_qc();
-    build_non_noisy_circuit(3);
-    invalid_depolarization_probabilities();
-    invalid_amplitude_damping_probabilities();
-    invalid_phaseflip_probabilities();
-    // build_noisy_circuit(3);
+    failure_noise_model_build_invalid_depolarization();
+    failure_noise_model_build_invalid_T1();
+    failure_noise_model_build_invalid_T2();
+    build_circuit();
 
     return 0;
 }
