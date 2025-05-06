@@ -1,28 +1,21 @@
-#ifndef CLUE_EX_EX
-#define CLUE_EX_EX
+#ifndef CLUE_NOISE_EX_EX
+#define CLUE_NOISE_EX_EX
 
 #include "Linalg.hpp"
 #include "dd/Package.hpp"
+#include "Experiment.hpp"
+#include "NoisyQC.hpp"
 
 using namespace std;
 
-enum ExperimentType
-{
-    CLUE,       // Experiment will reduce with CLUE and then iterate
-    DDSIM,      // Experiment will reduce with DD and then iterate
-    DIRECT,     // Experiment will reduce with DIRECT and then iterate
-    DDSIM_ALONE // Experiment will run the iteration on DD without reduction
-};
-
-ExperimentType ExperimentType_fromString(string);
-string ExperimentType_toString(ExperimentType);
-
 /**
- * Class that define an interface for experiments.
+ * Class that define an interface for noise experiments.
  *
  * This class is abstract and the methods required for an experiment to work are the pure virtual methods.
+ *
+ * Taken from Experiments.hpp and added noise parameters.
  */
-class Experiment
+class NoiseExperiment
 {
 protected:
     /** ABSTRACT METHODS FOR AN EXPERIMENT **/
@@ -51,14 +44,15 @@ protected:
     /* Method to obtain the BEGIN circuit (if necessary) */
     virtual qc::QuantumComputation *quantum_B(double) = 0;
     /* Method to change the type of experiment */
-    virtual Experiment *change_exec_type(ExperimentType) = 0;
+    virtual NoiseExperiment *change_exec_type(ExperimentType) = 0;
 
     // Protected attributes
-    string name;            // Name of the experiment
-    string observable;      // String representing the observable for the lumping
-    luint iterations;       // Number of iterations to perform in an experiment.
-    ExperimentType type;    // Type of the experiment. Depending on the type, different methods will be run
-    dd::Package<> *package; // dd::Package with the cache information for the size for  whole execution.
+    string name;             // Name of the experiment
+    string observable;       // String representing the observable for the lumping
+    luint iterations;        // Number of iterations to perform in an experiment.
+    ExperimentType type;     // Type of the experiment. Depending on the type, different methods will be run
+    dd::Package<> *package;  // dd::Package with the cache information for the size for  whole execution.
+    NoiseModel *noise_model; // The noise model used to build the circuit with noise applied.
 
     /* Execution attributes */
     bool executed = false;  // Flag indicating if the experiment has been executed or not
@@ -67,6 +61,16 @@ protected:
     double it_time = -1.0;  // Execution time of the iteration.
     double tot_time = -1.0; // Execution time of the iteration.
     double mem_used = -1.0; // Memory usage of the execution
+    /* The three probabilities that noise is applied
+            Example: P1 = depolarization probability
+                     P2 = amplitude damping probability
+                     P3 = phase flip probability
+
+            Depolarization    = [I: 1-(3*P1), X: P1, Y: P1, Z: P1]
+            Amplitude Damping = [E_0: 1-P2, E_1: P2] E_0 and E_1 is T1 decoherence eq. 6 in Wille's paper
+            Phase Flip        = [I (or nothing): 1-P3, Z: P3] This is the T2 decoherence, eq. 7 in Wille's paper
+    */
+    dd::fp fidelity = 0;
 
     // Protected methods
     /* Method to get the observable for use with CLUE */
@@ -86,16 +90,17 @@ private:
 
 public:
     /** CONSTRUCTORS **/
-    Experiment(string eName, string eObservable, luint eIterations, ExperimentType eType, dd::Package<> *ePackage)
+    NoiseExperiment(string eName, string eObservable, luint eIterations, ExperimentType eType, dd::Package<> *ePackage, NoiseModel *eNoiseModel)
     {
         this->name = eName;
         this->observable = eObservable;
         this->iterations = eIterations;
         this->type = eType;
         this->package = ePackage;
+        this->noise_model = eNoiseModel;
     }
 
-    virtual ~Experiment() = default;
+    virtual ~NoiseExperiment() = default;
     /* Method that runs the experiment */
     void run();
     /* Method to clean the execution run */
@@ -104,6 +109,8 @@ public:
     virtual string to_string() = 0;
     /* Method that generate the CSV row for this experiment */
     string to_csv(char = ',');
+    /* Method to get the fidelity between expected result and succes state (might only be useful for Grover?)*/
+    virtual dd::fp calc_fidelity(dd::vEdge) = 0;
 
     /* Method to get the total execution time */
     double total_time() { return this->tot_time; }
@@ -113,6 +120,11 @@ public:
     double reduction_time() { return this->red_time; }
     /* Method to get the total execution time */
     double iteration_time() { return this->it_time; }
+    /* Auxiliar method to convert time clocks into double time */
+    double time_to_double(clock_t &init, clock_t &end)
+    {
+        return (double(end - init) / double(CLOCKS_PER_SEC));
+    }
 };
 
 #endif

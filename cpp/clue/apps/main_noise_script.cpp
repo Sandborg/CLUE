@@ -6,39 +6,50 @@
 #include <cstdlib>
 #include <string>
 
+#include <experiments/NoiseExperiment.hpp>
+#include "experiments/NoisyGroverExperiment.hpp"
+/*
 #include "experiments/SATExperiment.hpp"
 #include "experiments/CUTExperiment.hpp"
-#include "experiments/NoisyGroverExperiment.hpp"
 #include "experiments/BenchmarkExperiment.hpp"
+*/
 
 using namespace std;
 
-Experiment *generate_example(string name, luint size, ExperimentType type, string observable, dd::Package<> *package, double epsilon)
+NoiseExperiment *generate_example(string name, luint size, ExperimentType type, string observable, dd::Package<> *package, NoiseModel *noise_model)
 {
     string upper = boost::to_upper_copy<std::string>(name);
+    /*
     if (upper == "SAT")
-    {
-        return SATFormula::random(size, static_cast<luint>(rand()) % (2 * size) + size, true, 3UL, type, package);
-    }
-    else if (upper == "MAXCUT")
-    {
-        return UndirectedGraph::random(size, 1. / 3., type, package);
-    }
-    else if (upper == "SEARCH")
-    {
-        return NoisyQuantumSearch::ones_string(size, type, package, epsilon);
-    }
-    else
-    {
-        try
-        {
-            return new BenchmarkExperiment(size, name, observable, type, package);
-        }
-        catch (const domain_error &err)
-        {
-            throw logic_error("The given class of experiments is not recognized.");
-        }
-    }
+     {
+         return SATFormula::random(size, static_cast<luint>(rand()) % (2 * size) + size, true, 3UL, type, package);
+     }
+     else if (upper == "MAXCUT")
+     {
+         return UndirectedGraph::random(size, 1. / 3., type, package);
+     }
+     else if (upper == "SEARCH")
+     {
+         auto distribution = generate_random_grover_distribution(epsilon);
+         auto search = NoisyQuantumSearch::ones_string(size, type, package, distribution, epsilon);
+         search->convert_succes_set_qstate();
+         return search;
+     }
+     else
+     {
+         try
+         {
+             return new BenchmarkExperiment(size, name, observable, type, package);
+         }
+         catch (const domain_error &err)
+         {
+             throw logic_error("The given class of experiments is not recognized.");
+         }
+     }
+    */
+    auto search = NoisyQuantumSearch::ones_string(size, type, package, noise_model);
+    search->convert_succes_set_qstate();
+    return search;
 }
 
 vector<string> generate_observables(string observable, luint size)
@@ -88,10 +99,13 @@ int main_script(string name, ExperimentType type, luint m, luint M, luint repeat
 
         double starting = 0.001;
         double finishing = 1.0;
-        double epsilon = starting;
+        double depolarization_noise = starting;
+        double phaseflip_noise = 0.1;
+        double amp_damping_noise = 0.2;
 
-        while (epsilon < finishing)
+        while (depolarization_noise <= finishing)
         {
+
             for (string obs : generate_observables(observable, size))
             {
                 for (luint execution = 1; execution <= repeats; execution++)
@@ -99,10 +113,18 @@ int main_script(string name, ExperimentType type, luint m, luint M, luint repeat
                     try
                     {
                         dd::Package<> *package = new dd::Package<>(size);
-                        Experiment *experiment = generate_example(name, size, type, obs, package, epsilon);
+                        auto noise_model = new NoiseModel(depolarization_noise, phaseflip_noise, amp_damping_noise);
+                        NoiseExperiment *experiment = generate_example(name, size, type, obs, package, noise_model);
                         cout << "##################################################################################" << endl;
-                        cout << "Current epsilon: " << epsilon << endl;
                         cout << "Generated example\n\t" << experiment->to_string() << endl;
+                        cout << "Current Errors: Depolarization: "
+                             << depolarization_noise
+                             << ", Amplitude Damping: "
+                             << amp_damping_noise
+                             << ", Phase flip: "
+                             << phaseflip_noise
+                             << endl;
+
                         experiment->run();
 
                         cout << "### -- Finished execution " << execution << "/" << repeats << "(size=" << size << "): took " << experiment->total_time() << "s." << endl;
@@ -111,6 +133,7 @@ int main_script(string name, ExperimentType type, luint m, luint M, luint repeat
                         out << experiment->to_csv() << endl;
                         delete experiment;
                         delete package;
+                        delete noise_model;
                     }
                     catch (qc::QFRException &e)
                     {
@@ -118,7 +141,7 @@ int main_script(string name, ExperimentType type, luint m, luint M, luint repeat
                     }
                 }
             }
-            epsilon = epsilon + pow(10, floor(log10(epsilon)));
+            depolarization_noise = depolarization_noise + pow(10, floor(log10(depolarization_noise)));
         }
     }
     double average_time = total_time / static_cast<double>((M - m + 1) * repeats);
@@ -154,7 +177,7 @@ int main(int argc, char **argv)
     srand(static_cast<unsigned>(time(NULL)));
     string test = "search";
     ExperimentType type = ExperimentType::DDSIM_ALONE;
-    luint m = 4, M = 4, repeats = 1;
+    luint m = 5, M = 5, repeats = 1;
     string observable = "H";
 
     if (argc > 1)

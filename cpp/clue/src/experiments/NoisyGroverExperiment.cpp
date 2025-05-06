@@ -1,9 +1,10 @@
 #include "experiments/NoisyGroverExperiment.hpp"
 
 #include <cstdlib>
+#include <string>
 #include "dd/Simulation.hpp"
 
-NoisyQuantumSearch::NoisyQuantumSearch(luint nQbits, vector<luint> success, luint eIterations, ExperimentType eType, dd::Package<> *ePackage, double epsilon) : Experiment("Grover", "H", eIterations, eType, ePackage)
+NoisyQuantumSearch::NoisyQuantumSearch(luint nQbits, vector<luint> success, luint eIterations, ExperimentType eType, dd::Package<> *ePackage, NoiseModel *eNoiseModel) : NoiseExperiment("Grover", "H", eIterations, eType, ePackage, eNoiseModel)
 {
     this->qbits = nQbits;
     luint bound = static_cast<luint>(pow(2UL, nQbits - 1));
@@ -18,18 +19,10 @@ NoisyQuantumSearch::NoisyQuantumSearch(luint nQbits, vector<luint> success, luin
             this->success_set.insert(el);
         }
     }
-
-    if (epsilon < 0.0 || epsilon > 1.0)
-    {
-        throw domain_error("The value of epsilon should be between 0 and 1");
-    }
-    else
-    {
-        this->epsilon = epsilon;
-    }
 }
+
 /*method to instead of having random succes values we search for, we want to use a trivial case of n nQbits - 1 ones*/
-/*static*/ NoisyQuantumSearch *NoisyQuantumSearch::ones_string(luint nQbits, ExperimentType eType, dd::Package<> *ePackage, double epsilon)
+/*static*/ NoisyQuantumSearch *NoisyQuantumSearch::ones_string(luint nQbits, ExperimentType eType, dd::Package<> *ePackage, NoiseModel *eNoiseModel)
 {
     luint value = static_cast<luint>(pow(2UL, nQbits - 1));
     luint iterations = static_cast<luint>(ceil(pow(2., static_cast<double>(nQbits - 1) / 2.))) - 1;
@@ -37,9 +30,9 @@ NoisyQuantumSearch::NoisyQuantumSearch(luint nQbits, vector<luint> success, luin
     auto success_set = vector<luint>();
     success_set.push_back(value - 1UL);
 
-    return new NoisyQuantumSearch(nQbits, success_set, iterations, eType, ePackage, epsilon);
+    return new NoisyQuantumSearch(nQbits, success_set, iterations, eType, ePackage, eNoiseModel);
 }
-/*static*/ NoisyQuantumSearch *NoisyQuantumSearch::random(luint nQbits, ExperimentType eType, dd::Package<> *ePackage, double epsilon)
+/*static*/ NoisyQuantumSearch *NoisyQuantumSearch::random(luint nQbits, ExperimentType eType, dd::Package<> *ePackage, NoiseModel *eNoiseModel)
 {
     luint half_size = static_cast<luint>(pow(2UL, nQbits - 1));
     luint iterations = static_cast<luint>(ceil(pow(2., static_cast<double>(nQbits - 1) / 2.))) - 1;
@@ -51,7 +44,7 @@ NoisyQuantumSearch::NoisyQuantumSearch(luint nQbits, vector<luint> success, luin
     {
         success_set.push_back(static_cast<luint>(rand()) % half_size);
     }
-    return new NoisyQuantumSearch(nQbits, success_set, iterations, eType, ePackage, epsilon);
+    return new NoisyQuantumSearch(nQbits, success_set, iterations, eType, ePackage, eNoiseModel);
 }
 
 bool NoisyQuantumSearch::oracle(boost::dynamic_bitset<> bitchain)
@@ -78,7 +71,7 @@ bool NoisyQuantumSearch::oracle(luint value)
     // return this->success_set.contains(value);
 }
 
-/**a
+/**
  * @brief Applies the Quantum Oracle associated with `this`.
  *
  * This method applies to the given ``circuit`` the Quantum Oracle associated with the
@@ -91,7 +84,7 @@ bool NoisyQuantumSearch::oracle(luint value)
  * representing `element`. More precisely, for `3` in 4 bits, we have `3 = 0101`, so we would
  * apply a controlled `X` to the 5-th qubit with controls `C(-)C(+)C(-)C(+)`.
  */
-void NoisyQuantumSearch::quantum_oracle(NoisyQuantumComputation &circuit, double epsilon)
+void NoisyQuantumSearch::quantum_oracle(qc::QuantumComputation &circuit)
 {
     vector<boost::dynamic_bitset<>> success_bitchains = vector<boost::dynamic_bitset<>>(this->success_set.size());
     luint j = 0;
@@ -108,9 +101,7 @@ void NoisyQuantumSearch::quantum_oracle(NoisyQuantumComputation &circuit, double
         {
             controls.emplace(static_cast<qc::Qubit>(i), (element[i] ? qc::Control::Type::Pos : qc::Control::Type::Neg));
         }
-        auto qc = qc::QuantumComputation(this->size());
-        qc.mcx(controls, static_cast<qc::Qubit>(this->size() - 1));
-        circuit.push_back(qc, epsilon);
+        circuit.mcx(controls, static_cast<qc::Qubit>(this->size() - 1));
     }
 }
 /**
@@ -125,14 +116,12 @@ void NoisyQuantumSearch::quantum_oracle(NoisyQuantumComputation &circuit, double
  * over the ancillary qubit with negative controls all over other qubits.
  *
  */
-void NoisyQuantumSearch::quantum_diffusion(NoisyQuantumComputation &circuit, double epsilon)
+void NoisyQuantumSearch::quantum_diffusion(qc::QuantumComputation &circuit)
 {
     // Code taken from mqt-core/algorithms/Grover.cpp
     for (luint i = 1; i < this->size() - 1; ++i)
     {
-        auto qc = qc::QuantumComputation(this->size());
-        qc.h(static_cast<qc::Qubit>(i));
-        circuit.push_back(qc, epsilon);
+        circuit.h(static_cast<qc::Qubit>(i));
     }
 
     qc::Controls controls{};
@@ -140,23 +129,13 @@ void NoisyQuantumSearch::quantum_diffusion(NoisyQuantumComputation &circuit, dou
     {
         controls.emplace(j, qc::Control::Type::Neg);
     }
-
-    auto qc1 = qc::QuantumComputation(this->size());
-    auto qc2 = qc::QuantumComputation(this->size());
-    auto qc3 = qc::QuantumComputation(this->size());
-    qc1.z(0); // X-H-X
-    qc2.mcx(controls, 0);
-    qc3.z(0); // X-H-X
-
-    circuit.push_back(qc1, epsilon);
-    circuit.push_back(qc2, epsilon);
-    circuit.push_back(qc3, epsilon);
+    circuit.z(0); // X-H-X
+    circuit.mcx(controls, 0);
+    circuit.z(0); // X-H-X
 
     for (luint i = this->size() - 2; i > 0; --i)
     {
-        auto qc = qc::QuantumComputation(this->size());
-        qc.h(static_cast<qc::Qubit>(i));
-        circuit.push_back(qc, epsilon);
+        circuit.h(static_cast<qc::Qubit>(i));
     }
 }
 
@@ -229,13 +208,15 @@ dd::CMat NoisyQuantumSearch::matrix_B(dd::CMat &U)
 }
 qc::QuantumComputation *NoisyQuantumSearch::quantum(double)
 {
-    double epsilon = this->epsilon;
-    NoisyQuantumComputation circuit = NoisyQuantumComputation(this->size());
+    auto circuit = new qc::QuantumComputation(this->size());
 
-    this->quantum_oracle(circuit, epsilon);
-    this->quantum_diffusion(circuit, epsilon);
+    this->quantum_oracle(*circuit);
+    this->quantum_diffusion(*circuit);
 
-    return circuit.build_noisy_qc();
+    auto noisy_circuit = this->noise_model->build_noisy_qc(*circuit);
+    delete circuit;
+
+    return noisy_circuit;
 }
 qc::QuantumComputation *NoisyQuantumSearch::quantum_B(double)
 {
@@ -251,7 +232,7 @@ NoisyQuantumSearch *NoisyQuantumSearch::change_exec_type(ExperimentType new_type
         to_copy.push_back(*it);
     }
 
-    return new NoisyQuantumSearch(this->size() - 1, to_copy, this->iterations, new_type, this->package, this->epsilon);
+    return new NoisyQuantumSearch(this->size() - 1, to_copy, this->iterations, new_type, this->package, this->noise_model);
 }
 
 string NoisyQuantumSearch::to_string()
@@ -294,89 +275,7 @@ void NoisyQuantumSearch::convert_succes_set_qstate()
     }
 }
 
-dd::fp fid_test(dd::Package<> *package, dd::vEdge dd)
+dd::fp NoisyQuantumSearch::calc_fidelity(dd::vEdge result)
 {
-
-    auto fidelity = package->fidelity(dd, dd);
-
-    return fidelity;
-}
-
-/* Method that simulates a quantum circuit without reduction (only used when this->type == DDSIM_ALONE) */
-void NoisyQuantumSearch::run_ddsim_alone()
-{
-    cerr << "+++ [ddsim-only @ " << this->name << "] Computing DDSIM ONLY execution for " << this->name << endl;
-    clock_t begin = clock();
-    cerr << "+++ [ddsim-only @ " << this->name << "] Setting up observable (" << this->observable << ") and system..." << endl;
-    dd::vEdge obs = this->dd_observable();
-    this->convert_succes_set_qstate();
-    double par_value = 1. / (pow(2., static_cast<double>(this->size())) * static_cast<double>(10 * this->iterations));
-    qc::QuantumComputation *U_P = this->quantum(par_value);
-    qc::QuantumComputation *U_B = this->quantum_B(par_value);
-
-    cerr << "Circuit Created:" << endl;
-    cerr << *U_P << endl;
-
-    cerr << "+++ [ddsim-only @ " << this->name << "] Computing the iteration (U_P*U_B)^iterations..." << endl;
-    clock_t b_iteration = clock();
-    dd::vEdge current = obs; // We create a new vector for the current
-
-    for (luint i = 0; i < this->iterations; i++)
-    {
-        current = dd::simulate<>(U_P, current, *package);
-        current = dd::simulate<>(U_B, current, *package);
-    }
-
-    /*cerr << "state vector after simulation" << endl;
-    current.printVector();
-    cerr << "the state vector that we are looking for" << endl;
-    this->succes_states[0].printVector();
-
-    // auto fid = fid_test(this->package, current);
-    // cerr << "The fidelity between the state after simulation and itself: " << fid_test << endl;
-    */
-    this->fidelity = this->package->fidelity(current, this->succes_states[0]);
-    cerr << "The fidelity between the expected state and the result from the simulation: " << this->fidelity << endl;
-    clock_t a_iteration = clock();
-    clock_t end = clock();
-
-    // We store the data
-    this->red_time = 0.0;
-    this->it_time = time_to_double(b_iteration, a_iteration);
-    this->tot_time = time_to_double(begin, end);
-
-    delete U_P;
-    delete U_B;
-
-    return;
-}
-
-string NoisyQuantumSearch::to_csv(char delimiter)
-{
-    stringstream stream;
-    stream << this->size()
-           << delimiter
-           << this->bound_size()
-           << delimiter
-           << this->name
-           << delimiter
-           << this->observable
-           << delimiter
-           << this->red_time
-           << delimiter
-           << this->red_ratio
-           << delimiter
-           << this->iterations
-           << delimiter
-           << this->it_time
-           << delimiter
-           << this->tot_time
-           << delimiter
-           << epsilon
-           << delimiter
-           << fidelity
-           << delimiter
-           << this->to_string();
-
-    return stream.str();
+    return this->package->fidelity(result, this->succes_states[0]);
 }
