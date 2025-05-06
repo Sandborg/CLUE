@@ -13,13 +13,13 @@ void failure_noise_model_build_invalid_depolarization()
 
     try
     {
-        auto nqc_above = NoiseModel(size, invalid_depolarization_above, 0.0, 0.0);
+        auto nqc_above = NoiseModel(invalid_depolarization_above, 0.0, 0.0);
     }
     catch (const std::logic_error &e)
     {
         try
         {
-            auto nqc_below = NoiseModel(size, invalid_depolarization_below, 0.0, 0.0);
+            auto nqc_below = NoiseModel(invalid_depolarization_below, 0.0, 0.0);
         }
         catch (const std::logic_error &e)
         {
@@ -38,13 +38,13 @@ void failure_noise_model_build_invalid_T1()
 
     try
     {
-        auto nqc_above = NoiseModel(size, 0.0, invalid_T1_above, 0.0);
+        auto nqc_above = NoiseModel(0.0, invalid_T1_above, 0.0);
     }
     catch (const std::logic_error &e)
     {
         try
         {
-            auto nqc_below = NoiseModel(size, 0.0, invalid_T1_below, 0.0);
+            auto nqc_below = NoiseModel(0.0, invalid_T1_below, 0.0);
         }
         catch (const std::logic_error &e)
         {
@@ -63,13 +63,13 @@ void failure_noise_model_build_invalid_T2()
 
     try
     {
-        auto nqc_above = NoiseModel(size, 0.0, 0.0, invalid_T2_above);
+        auto nqc_above = NoiseModel(0.0, 0.0, invalid_T2_above);
     }
     catch (const std::logic_error &e)
     {
         try
         {
-            auto nqc_below = NoiseModel(size, 0.0, 0.0, invalid_T2_below);
+            auto nqc_below = NoiseModel(0.0, 0.0, invalid_T2_below);
         }
         catch (const std::logic_error &e)
         {
@@ -96,7 +96,7 @@ void build_circuit()
     double depolarization = 0.1;
     double T1 = 0.2;
     double T2 = 0.1;
-    auto noise_model = NoiseModel(size, depolarization, T1, T2);
+    auto noise_model = NoiseModel(depolarization, T1, T2);
 
     // check current size, should be number of targets in qc ops * 4
     auto nqc = noise_model.build_noisy_qc(qc);

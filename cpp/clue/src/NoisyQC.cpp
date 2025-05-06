@@ -1,9 +1,8 @@
 #include "NoisyQC.hpp"
 #include <random>
 
-NoiseModel::NoiseModel(luint _nQubits, double eP1, double eP2, double eP3)
+NoiseModel::NoiseModel(double eP1, double eP2, double eP3)
 {
-    this->nQubits = _nQubits;
 
     if (eP1 > 1 or eP1 < 0)
         throw std::logic_error("The probability for depolarization should not be higher than 1 nor lower than 0, was given " + std::to_string(eP1));
@@ -21,7 +20,7 @@ NoiseModel::NoiseModel(luint _nQubits, double eP1, double eP2, double eP3)
         this->p_amplitude_damp = eP3;
 }
 
-/*  We apply all three error typos but in sequence. Specifically, assume we have a one-qubit gate U and let us fix the probabilities p, p_1, p_2.
+/*  We apply all three error types but in sequence. Specifically, assume we have a one-qubit gate U and let us fix the probabilities p, p_1, p_2.
     Then, the noisy version of U is modelled via the following random experiment:
 
     Steps:
@@ -34,7 +33,7 @@ NoiseModel::NoiseModel(luint _nQubits, double eP1, double eP2, double eP3)
 */
 qc::QuantumComputation *NoiseModel::build_noisy_qc(qc::QuantumComputation &qc)
 {
-    auto noisy_qc = new qc::QuantumComputation(this->nQubits);
+    auto noisy_qc = new qc::QuantumComputation(qc.getNqubits());
 
     double I = 1 - ((3 * this->p_depolarization) / 4);
     double X = this->p_depolarization / 4;

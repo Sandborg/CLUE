@@ -113,7 +113,7 @@ int main_script(string name, ExperimentType type, luint m, luint M, luint repeat
                     try
                     {
                         dd::Package<> *package = new dd::Package<>(size);
-                        auto noise_model = new NoiseModel(size, depolarization_noise, phaseflip_noise, amp_damping_noise);
+                        auto noise_model = new NoiseModel(depolarization_noise, phaseflip_noise, amp_damping_noise);
                         NoiseExperiment *experiment = generate_example(name, size, type, obs, package, noise_model);
                         cout << "##################################################################################" << endl;
                         cout << "Generated example\n\t" << experiment->to_string() << endl;
