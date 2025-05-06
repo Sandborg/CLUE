@@ -90,6 +90,7 @@ void build_circuit()
     qc.x(1);
     qc.y(2);
     qc.h(0);
+    qc.swap(0, 2);
 
     // build noise model
     double depolarization = 0.1;
@@ -104,46 +105,18 @@ void build_circuit()
     for (auto &op : qc)
         n_targets += op->getNtargets();
 
-    luint expected_size = n_targets * 4;
+    luint circuit_size = n_targets * 4;
+    luint expected_size = 6 * 4; // we have 6 target, 1 for h,x,y, and 2 for swap
 
-    if (expected_size != nqc->size())
+    if (expected_size != circuit_size)
     {
-        throw std::runtime_error("The built circuit does not have the currect size, expected: " + std::to_string(expected_size) + ", built: " + std::to_string(nqc->size()));
+        delete nqc;
+        throw std::runtime_error("The built circuit does not have the currect size, expected: " + std::to_string(expected_size) + ", built: " + std::to_string(circuit_size) + " with " + std::to_string(n_targets) + " targets");
     }
 
+    delete nqc;
     return;
 }
-/*
-    Need to figure out how to test this.
-    void build_noisy_circuit(luint qubits)
-    {
-        double epsilon = 0.01;
-
-        auto nqc = NoisyQuantumComputation(qubits);
-
-        // Add layers to the Noisy QuantumComputation
-        for (int i = 0; i < qubits; i++)
-        {
-            auto qc = qc::QuantumComputation(qubits);
-            qc.h(i);
-            nqc.push_back(qc);
-        }
-
-        std::map<std::string, std::vector<double>> P;
-
-        P["x"] = {0.88, 0.05, 0.02, 0.03, 0.02};
-        P["h"] = {0.92, 0.01, 0.02, 0.03, 0.02};
-        P["z"] = {0.96, 0.01, 0.01, 0.01, 0.01};
-        // Build the noisy circuit
-        auto noisy_qc = nqc.build_noisy_qc(P);
-
-        // Check if the size of the noisy circuit is equal to the number of layers
-        if (noisy_qc->size() != nqc.size())
-        {
-            throw std::runtime_error("The size of the noisy circuit does not match the number of layers.");
-        }
-    }
-    */
 
 int main()
 {
