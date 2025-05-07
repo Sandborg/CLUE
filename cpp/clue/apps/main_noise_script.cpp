@@ -98,7 +98,7 @@ int main_script(string name, ExperimentType type, luint m, luint M, luint repeat
       // For each size we also go from starting to finishing epsilon values.
 
         double starting = 0.001;
-        double finishing = 1.0;
+        double finishing = 0.1;
         double depolarization_noise = starting;
         double phaseflip_noise = 0.1;
         double amp_damping_noise = 0.2;

@@ -79,12 +79,6 @@ protected:
     virtual dd::vEdge dd_observable(); // TODO Currently not working
 
 private:
-    /* Method that runs the CLUE reduction (only used when this->type == CLUE) */
-    void run_clue();
-    /* Method that runs the DDSIM reduction (only used when this->type == DDSIM) */
-    void run_ddsim();
-    /* Method that runs the DIRECT reduction (only used when this->type == DIRECT) */
-    void run_direct();
     /* Method that runs the CLUE reduction (only used when this->type == DDSIM_ALONE) */
     void run_ddsim_alone();
 
