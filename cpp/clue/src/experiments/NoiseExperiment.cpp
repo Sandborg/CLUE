@@ -49,7 +49,8 @@ dd::vEdge NoiseExperiment::dd_observable()
 }
 
 // PRIVATE METHODS
-/* Method that runs the CLUE reduction (only used when this->type == DDSIM_ALONE) */
+/* Method that runs simulation of a circuit without any reduction. Collects fidelity between success state and outcome
+(only used when this->type == DDSIM_ALONE) */
 void NoiseExperiment::run_ddsim_alone()
 {
     cerr << "+++ [ddsim-only @ " << this->name << "] Computing DDSIM ONLY execution for " << this->name << endl;

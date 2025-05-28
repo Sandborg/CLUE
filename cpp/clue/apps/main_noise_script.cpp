@@ -100,8 +100,8 @@ int main_script(string name, ExperimentType type, luint m, luint M, luint repeat
         double starting = 0.001;
         double finishing = 0.1;
         double depolarization_noise = starting;
-        double phaseflip_noise = 0.1;
-        double amp_damping_noise = 0.2;
+        double phaseflip_noise = 0.001;
+        double amp_damping_noise = 0.002;
 
         while (depolarization_noise <= finishing)
         {
