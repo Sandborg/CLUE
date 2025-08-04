@@ -65,10 +65,9 @@ void NoiseExperiment::run_ddsim_alone()
 
     for (luint i = 0; i < this->iterations; i++)
     {
+        // Noisy case: We create the circuit anew for each iteration
         qc::QuantumComputation *U_P = this->quantum(par_value);
         qc::QuantumComputation *U_B = this->quantum_B(par_value);
-        // cerr << "Circuit Created:" << endl;
-        // cerr << *U_P << endl;
         current = dd::simulate<>(U_P, current, *package);
         current = dd::simulate<>(U_B, current, *package);
         delete U_P;
@@ -86,6 +85,28 @@ void NoiseExperiment::run_ddsim_alone()
     this->tot_time = time_to_double(begin, end);
 
     return;
+}
+
+void NoiseExperiment::run_ddsim_noise()
+{
+    cerr << "+++ [ddsim-noise @ " << this->name << "] Computing DDSIM NOISY  execution for " << this->name << endl;
+    clock_t begin = clock();
+    cerr << "+++ [ddsim-noise @ " << this->name << "] Setting up observable (" << this->observable << ") and system..." << endl;
+    dd::vEdge obs = this->dd_observable();
+    double par_value = 1. / (pow(2., static_cast<double>(this->size())) * static_cast<double>(10 * this->iterations));
+
+    cerr << "+++ [ddsim-only @ " << this->name << "] Computing the iteration (U_P*U_B)^iterations..." << endl;
+    clock_t b_iteration = clock();
+    dd::vEdge current = obs; // We create a new vector for the current
+
+    luint d = 5;
+
+    for (luint k = 1; k <= d; k++)
+    {
+        for (luint l = k; l <= d; d++)
+        {
+        }
+    }
 }
 
 // PUBLIC METHODS

@@ -81,6 +81,8 @@ protected:
 private:
     /* Method that runs the CLUE reduction (only used when this->type == DDSIM_ALONE) */
     void run_ddsim_alone();
+    /* Method that runs the noisy DDSIM reduction (only used with this->type == DDSIM_NOISE)*/
+    void run_ddsim_noise();
 
 public:
     /** CONSTRUCTORS **/
