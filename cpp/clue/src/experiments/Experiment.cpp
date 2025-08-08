@@ -29,6 +29,10 @@ ExperimentType ExperimentType_fromString(string value)
     {
         return ExperimentType::DDSIM_ALONE;
     }
+    else if (upper == "DDSIM_NOISE")
+    {
+        return ExperimentType::DDSIM_NOISE;
+    }
     else
     {
         throw logic_error("Unrecognize experiment type from string (" + value + ")");
@@ -46,6 +50,8 @@ string ExperimentType_toString(ExperimentType type)
         return "direct";
     case ExperimentType::DDSIM_ALONE:
         return "full_ddsim";
+    case ExperimentType::DDSIM_NOISE:
+        return "noise_ddsim";
     default:
         throw logic_error("Unrecognized type for experiment");
     }

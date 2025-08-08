@@ -279,3 +279,8 @@ dd::fp NoisyQuantumSearch::calc_fidelity(dd::vEdge result)
 {
     return this->package->fidelity(result, this->succes_states[0]);
 }
+
+dd::fp NoisyQuantumSearch::calc_fidelity(dd::vEdge &s1, dd::vEdge &s2)
+{
+    return this->package->fidelity(s1, s2);
+}

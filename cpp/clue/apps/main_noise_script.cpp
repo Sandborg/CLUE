@@ -98,7 +98,7 @@ int main_script(string name, ExperimentType type, luint m, luint M, luint repeat
       // For each size we also go from starting to finishing epsilon values.
 
         double starting = 0.001;
-        double finishing = 0.1;
+        double finishing = 0.001;
         double depolarization_noise = starting;
         double phaseflip_noise = 0.001;
         double amp_damping_noise = 0.002;
@@ -176,8 +176,10 @@ int main(int argc, char **argv)
 {
     srand(static_cast<unsigned>(time(NULL)));
     string test = "search";
-    ExperimentType type = ExperimentType::DDSIM_ALONE;
-    luint m = 5, M = 5, repeats = 1;
+    // ExperimentType type = ExperimentType::DDSIM_ALONE;
+    ExperimentType type = ExperimentType::DDSIM_NOISE;
+
+    luint m = 4, M = 4, repeats = 1;
     string observable = "H";
 
     if (argc > 1)

@@ -42,15 +42,17 @@ protected:
     qc::QuantumComputation *quantum(double);
     qc::QuantumComputation *quantum_B(double);
     NoisyQuantumSearch *change_exec_type(ExperimentType);
+    dd::fp calc_fidelity(dd::vEdge);
+    dd::fp calc_fidelity(dd::vEdge &, dd::vEdge &);
 
 public:
     NoisyQuantumSearch(luint, vector<luint>, luint, ExperimentType, dd::Package<> *, NoiseModel *);
 
+    /* Methods to create a succes state, namely the number we are looking for*/
     static NoisyQuantumSearch *random(luint, ExperimentType, dd::Package<> *, NoiseModel *);
     static NoisyQuantumSearch *ones_string(luint, ExperimentType, dd::Package<> *, NoiseModel *);
     void convert_succes_set_qstate(); // Convert the succes values to a quantum state
 
-    dd::fp calc_fidelity(dd::vEdge);
     /* Method to get the string out of an experiment */
     string to_string();
 };

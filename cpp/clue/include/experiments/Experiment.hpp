@@ -8,10 +8,11 @@ using namespace std;
 
 enum ExperimentType
 {
-    CLUE,       // Experiment will reduce with CLUE and then iterate
-    DDSIM,      // Experiment will reduce with DD and then iterate
-    DIRECT,     // Experiment will reduce with DIRECT and then iterate
-    DDSIM_ALONE // Experiment will run the iteration on DD without reduction
+    CLUE,        // Experiment will reduce with CLUE and then iterate
+    DDSIM,       // Experiment will reduce with DD and then iterate
+    DIRECT,      // Experiment will reduce with DIRECT and then iterate
+    DDSIM_ALONE, // Experiment will run the iteration on DD without reduction
+    DDSIM_NOISE  // Experiment will reduce noisy circuit with DD and iterate. THIS IS NOT A GOOD WAY TO DO IT, BUT USED HERE BECAUSE WE WANT TO MERGE THE EXPERIMENT TYPES TOGETHER ANYWAY!
 };
 
 ExperimentType ExperimentType_fromString(string);

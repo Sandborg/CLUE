@@ -78,11 +78,17 @@ protected:
     /* Method to get the observable for use with DD */
     virtual dd::vEdge dd_observable(); // TODO Currently not working
 
+    /* Method to get the fidelity between expected result and succes state (might only be useful for Grover?)*/
+    virtual dd::fp calc_fidelity(dd::vEdge) = 0;
+    virtual dd::fp calc_fidelity(dd::vEdge &, dd::vEdge &) = 0;
+
 private:
     /* Method that runs the CLUE reduction (only used when this->type == DDSIM_ALONE) */
     void run_ddsim_alone();
     /* Method that runs the noisy DDSIM reduction (only used with this->type == DDSIM_NOISE)*/
     void run_ddsim_noise();
+    /*Method used to apply a circuit n times to a state*/
+    void sim_n_iterations(dd::vEdge &, luint iterations);
 
 public:
     /** CONSTRUCTORS **/
@@ -105,8 +111,6 @@ public:
     virtual string to_string() = 0;
     /* Method that generate the CSV row for this experiment */
     string to_csv(char = ',');
-    /* Method to get the fidelity between expected result and succes state (might only be useful for Grover?)*/
-    virtual dd::fp calc_fidelity(dd::vEdge) = 0;
 
     /* Method to get the total execution time */
     double total_time() { return this->tot_time; }
