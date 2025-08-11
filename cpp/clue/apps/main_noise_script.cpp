@@ -179,7 +179,7 @@ int main(int argc, char **argv)
     // ExperimentType type = ExperimentType::DDSIM_ALONE;
     ExperimentType type = ExperimentType::DDSIM_NOISE;
 
-    luint m = 4, M = 4, repeats = 1;
+    luint m = 5, M = 5, repeats = 1;
     string observable = "H";
 
     if (argc > 1)

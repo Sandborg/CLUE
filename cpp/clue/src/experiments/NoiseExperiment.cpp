@@ -122,13 +122,14 @@ void NoiseExperiment::run_ddsim_noise()
     luint M = 5000;             // The samples needed to make an accurate guess
     std::vector<std::vector<dd::fp>> inner_products(d + 1, std::vector<dd::fp>(d + 1, 0));
 
+    cerr << "Beginning calculation of inner products with d = " << d << "...";
     for (luint k = 0; k <= d; k++)
     {
         for (luint l = k; l <= d; l++)
         {
+            cerr << "Currently working on k = " << k << ", l = " << l << "\n";
             for (luint m = 0; m < M; m++)
             {
-                cerr << "Currently working on k = " << k << ", l = " << l << ", m = " << m << "\n";
                 dd::vEdge w = obs;
                 dd::vEdge v = obs;
 
@@ -140,6 +141,7 @@ void NoiseExperiment::run_ddsim_noise()
             inner_products[k][l] /= M;
         }
     }
+    cerr << "Finished calculation of inner products, moving onto reduction... \n\n";
 
     for (const auto &r : inner_products)
     {
@@ -159,33 +161,32 @@ void NoiseExperiment::run_ddsim_noise()
 
     So in the, say we want <A²,A¹>, it's stored at inner_products[1][2].
     */
-    std::vector<std::vector<dd::fp>> coeff_matrix(d + 1, std::vector<dd::fp>(d + 1, 0)); // d + 1 because we want to check up to and including d.
+    std::vector<std::vector<complex<double>>> coeff_matrix(d + 1, std::vector<complex<double>>(d + 1, 0)); // d + 1 because we want to check up to and including d.
 
     for (luint k = 1; k <= d; k++)
     {
         for (luint l = k; l <= d; l++)
         {
             // Calculate eta_k
-            dd::fp coeff_sum = 0.0;
+            complex<double> coeff_sum = 0.0;
             for (luint i = 1; i <= k - 1; i++)
             {
-                coeff_sum += std::pow(std::fabs(coeff_matrix[i][k - 1]), 2);
+                coeff_sum += std::pow(std::abs(coeff_matrix[i][k - 1]), 2);
             }
-            dd::fp eta = inner_products[k - 1][k - 1] - coeff_sum;
-            coeff_matrix[k][k] = eta;
-            cerr << "eta_k = " << eta << "\n";
+            coeff_matrix[k][k] = sqrt(inner_products[k - 1][k - 1] - coeff_sum);
 
             // Calculate gamma_{l,k}
-            dd::fp eta_sqrt = std::sqrt(coeff_matrix[k][k]);
+            cerr << "eta_" << k << " = " << coeff_matrix[k][k] << "\n";
 
-            dd::fp gamma_products = 0.0;
+            complex<double> gamma_products = 0.0;
 
             for (luint i = 1; i <= k - 1; i++)
             {
                 gamma_products += coeff_matrix[i][k - 1] * coeff_matrix[i][l];
             }
 
-            coeff_matrix[k][l] = (inner_products[k - 1][l] / eta_sqrt) - (gamma_products / eta_sqrt);
+            coeff_matrix[k][l] = (inner_products[k - 1][l] / coeff_matrix[k][k]) - (gamma_products / coeff_matrix[k][k]);
+            cerr << "coeff_matrix[" << k << "][" << l << "] = " << coeff_matrix[k][l] << "\n";
         }
     }
 
