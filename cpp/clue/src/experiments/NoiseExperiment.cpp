@@ -117,12 +117,22 @@ void NoiseExperiment::run_ddsim_noise()
     cerr << "+++ [ddsim-only @ " << this->name << "] Computing the iteration (U_P*U_B)^iterations..." << endl;
     clock_t b_iteration = clock();
 
-    /*Setup for bisimulation: create a matrix with the inner product results.*/
-    luint d = this->iterations; // In the beginning we can just guess what the best reduction is.
-    luint M = 5000;             // The samples needed to make an accurate guess
+    /*Setup for bisimulation: create a matrix with the inner product results.
+      In the beginning we can just guess what the best reduction is.
+    */
+    luint d = 0;
+    if (this->drg == 0)
+    {
+        d = this->iterations; // If no guess is made, we just use the expected number of iterations to apply a circuit
+    }
+    else
+    {
+        d = this->drg; // A guess is made, try to reduce to this dimension.
+    }
+    luint M = 5000; // The samples needed to make an accurate guess
     std::vector<std::vector<dd::fp>> inner_products(d + 1, std::vector<dd::fp>(d + 1, 0));
 
-    cerr << "Beginning calculation of inner products with d = " << d << "...";
+    cerr << "Beginning calculation of inner products with d = " << d << "...\n";
     for (luint k = 0; k <= d; k++)
     {
         for (luint l = k; l <= d; l++)
@@ -142,7 +152,6 @@ void NoiseExperiment::run_ddsim_noise()
         }
     }
     cerr << "Finished calculation of inner products, moving onto reduction... \n\n";
-
     for (const auto &r : inner_products)
     {
         for (const auto &c : r)
@@ -151,6 +160,7 @@ void NoiseExperiment::run_ddsim_noise()
         }
         std::cerr << "\n";
     }
+    cerr << "\n";
 
     /*
     Main loops as presented by Max in overleaf text.
@@ -161,7 +171,9 @@ void NoiseExperiment::run_ddsim_noise()
 
     So in the, say we want <A²,A¹>, it's stored at inner_products[1][2].
     */
-    std::vector<std::vector<complex<double>>> coeff_matrix(d + 1, std::vector<complex<double>>(d + 1, 0)); // d + 1 because we want to check up to and including d.
+    std::vector<std::vector<complex<double>>> etas(d + 1, std::vector<complex<double>>(d + 1, 0));   // d + 1 because we want to check up to and including d.
+    std::vector<std::vector<complex<double>>> gammas(d + 1, std::vector<complex<double>>(d + 1, 0)); // d + 1 because we want to check up to and including d.
+    std::vector<std::vector<complex<double>>> result(d + 1, std::vector<complex<double>>(d + 1, 0)); // d + 1 because we want to check up to and including d.
 
     for (luint k = 1; k <= d; k++)
     {
@@ -171,27 +183,61 @@ void NoiseExperiment::run_ddsim_noise()
             complex<double> coeff_sum = 0.0;
             for (luint i = 1; i <= k - 1; i++)
             {
-                coeff_sum += std::pow(std::abs(coeff_matrix[i][k - 1]), 2);
+                coeff_sum += std::pow(std::abs(gammas[i][k - 1]), 2);
             }
-            coeff_matrix[k][k] = sqrt(inner_products[k - 1][k - 1] - coeff_sum);
+            etas[k][k] = sqrt(inner_products[k - 1][k - 1] - coeff_sum);
+            result[k - 1][k - 1] = etas[k][k];
 
+            /*
+            cerr << "eta term 1: " << sqrt(inner_products[k - 1][k - 1] - coeff_sum) << ", term 2: " << coeff_sum << "\n";
+            cerr << "eta_" << k << " = " << etas[k][k] << "\n";
+
+            complex<double> a = 0.747713;
+            complex<double> b = 0.0;
+            cerr << "\n Test : " << a - b << "\n";
+            */
             // Calculate gamma_{l,k}
-            cerr << "eta_" << k << " = " << coeff_matrix[k][k] << "\n";
-
             complex<double> gamma_products = 0.0;
 
             for (luint i = 1; i <= k - 1; i++)
             {
-                gamma_products += coeff_matrix[i][k - 1] * coeff_matrix[i][l];
+                gamma_products += gammas[i][k - 1] * gammas[i][l];
             }
 
-            coeff_matrix[k][l] = (inner_products[k - 1][l] / coeff_matrix[k][k]) - (gamma_products / coeff_matrix[k][k]);
-            cerr << "coeff_matrix[" << k << "][" << l << "] = " << coeff_matrix[k][l] << "\n";
+            gammas[k][l] = (inner_products[k - 1][l] / etas[k][k]) - (gamma_products / etas[k][k]);
+            result[k - 1][l] = gammas[k][l];
+
+            /*
+            cerr << "gamma_products = " << gamma_products << "\n";
+            cerr << "gamma term 1: " << (inner_products[k - 1][l] / etas[k][k]) << ", term 2: " << (gamma_products / etas[k][k]) << "\n";
+            cerr << "gamma_" << l << "," << k << " = " << gammas[k][l] << "\n";
+            */
         }
     }
 
     cerr << "\n\n";
-    for (const auto &r : coeff_matrix)
+    cerr << "Calculated etas" << "\n";
+    for (const auto &r : etas)
+    {
+        for (const auto &c : r)
+        {
+            std::cerr << c << ", ";
+        }
+        std::cerr << "\n";
+    }
+
+    cerr << "Calculated gammas" << "\n";
+    for (const auto &r : gammas)
+    {
+        for (const auto &c : r)
+        {
+            std::cerr << c << ", ";
+        }
+        std::cerr << "\n";
+    }
+
+    cerr << "Final A matrix" << "\n";
+    for (const auto &r : result)
     {
         for (const auto &c : r)
         {

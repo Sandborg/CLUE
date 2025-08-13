@@ -46,11 +46,11 @@ protected:
     dd::fp calc_fidelity(dd::vEdge &, dd::vEdge &);
 
 public:
-    NoisyQuantumSearch(luint, vector<luint>, luint, ExperimentType, dd::Package<> *, NoiseModel *);
+    NoisyQuantumSearch(luint, vector<luint>, luint, ExperimentType, dd::Package<> *, NoiseModel *, luint);
 
     /* Methods to create a succes state, namely the number we are looking for*/
-    static NoisyQuantumSearch *random(luint, ExperimentType, dd::Package<> *, NoiseModel *);
-    static NoisyQuantumSearch *ones_string(luint, ExperimentType, dd::Package<> *, NoiseModel *);
+    static NoisyQuantumSearch *random(luint, ExperimentType, dd::Package<> *, NoiseModel *, luint);
+    static NoisyQuantumSearch *ones_string(luint, ExperimentType, dd::Package<> *, NoiseModel *, luint);
     void convert_succes_set_qstate(); // Convert the succes values to a quantum state
 
     /* Method to get the string out of an experiment */
