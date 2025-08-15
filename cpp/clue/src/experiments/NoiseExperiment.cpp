@@ -114,7 +114,7 @@ void NoiseExperiment::run_ddsim_noise()
     dd::vEdge obs = this->dd_observable();
     double par_value = 1. / (pow(2., static_cast<double>(this->size())) * static_cast<double>(10 * this->iterations));
 
-    cerr << "+++ [ddsim-only @ " << this->name << "] Computing the iteration (U_P*U_B)^iterations..." << endl;
+    cerr << "+++ [ddsim-noise @ " << this->name << "] Computing the iteration (U_P*U_B)^iterations..." << endl;
     clock_t b_iteration = clock();
 
     /*Setup for bisimulation: create a matrix with the inner product results.
@@ -132,7 +132,7 @@ void NoiseExperiment::run_ddsim_noise()
     luint M = 5000; // The samples needed to make an accurate guess
     std::vector<std::vector<dd::fp>> inner_products(d + 1, std::vector<dd::fp>(d + 1, 0));
 
-    cerr << "Beginning calculation of inner products with d = " << d << "...\n";
+    cerr << "+++ Beginning calculation of inner products with d = " << d << "...\n";
     for (luint k = 0; k <= d; k++)
     {
         for (luint l = k; l <= d; l++)
@@ -152,6 +152,8 @@ void NoiseExperiment::run_ddsim_noise()
         }
     }
     cerr << "Finished calculation of inner products, moving onto reduction... \n\n";
+
+    cerr << "Calculated inner products for <A^l,A^k>, with 0 <= k <= l <= " << d << "\n";
     for (const auto &r : inner_products)
     {
         for (const auto &c : r)
@@ -215,7 +217,6 @@ void NoiseExperiment::run_ddsim_noise()
         }
     }
 
-    cerr << "\n\n";
     cerr << "Calculated etas" << "\n";
     for (const auto &r : etas)
     {
@@ -225,6 +226,7 @@ void NoiseExperiment::run_ddsim_noise()
         }
         std::cerr << "\n";
     }
+    std::cerr << "\n";
 
     cerr << "Calculated gammas" << "\n";
     for (const auto &r : gammas)
@@ -235,6 +237,7 @@ void NoiseExperiment::run_ddsim_noise()
         }
         std::cerr << "\n";
     }
+    std::cerr << "\n";
 
     cerr << "Final A matrix" << "\n";
     for (const auto &r : result)
