@@ -164,6 +164,14 @@ void NoiseExperiment::run_ddsim_noise()
     }
     cerr << "\n";
 
+    std::vector<std::vector<complex<double>>> A_hat(d, std::vector<complex<double>>(d, 0)); // d + 1 because we want to check up to and including d.
+
+    for (int i = 1; i <= d; i++)
+    {
+        A_hat[0][i - 1] = inner_products[0][i];
+    }
+    cerr << "\n";
+
     /*
     Main loops as presented by Max in overleaf text.
     In the text when seeing gamme_{l,k}, it it means we are looking at the k'th row and l'th column.
@@ -173,52 +181,53 @@ void NoiseExperiment::run_ddsim_noise()
 
     So in the, say we want <A²,A¹>, it's stored at inner_products[1][2].
     */
-    std::vector<std::vector<complex<double>>> etas(d + 1, std::vector<complex<double>>(d + 1, 0));   // d + 1 because we want to check up to and including d.
-    std::vector<std::vector<complex<double>>> gammas(d + 1, std::vector<complex<double>>(d + 1, 0)); // d + 1 because we want to check up to and including d.
-    std::vector<std::vector<complex<double>>> result(d + 1, std::vector<complex<double>>(d + 1, 0)); // d + 1 because we want to check up to and including d.
 
-    for (luint k = 1; k <= d; k++)
+    // This part is confusingly made atm: The code starts from the second iteration.
+    // this means i don't use k - 1 in <A^k-1,A^k-1> for example, since k = 1 in this loop actually is k = 2 in the pseuodo code on overleaf
+    // On line 211, i use l + 1, because that vector is made so that indexes tell the number of times a circuit have been applied to a state,
+    // thus, inner_products[1][2] is <A²,A¹>, for this reason we have to use l + 1.
+    for (luint k = 1; k < d; k++)
     {
-        for (luint l = k; l <= d; l++)
+        for (luint l = k; l < d; l++)
         {
             // Calculate eta_k
             complex<double> coeff_sum = 0.0;
-            for (luint i = 1; i <= k - 1; i++)
+            for (luint i = 0; i < k; i++)
             {
-                coeff_sum += std::pow(std::abs(gammas[i][k - 1]), 2);
+                coeff_sum += std::pow(std::abs(A_hat[i][k - 1]), 2);
             }
-            etas[k][k] = sqrt(inner_products[k - 1][k - 1] - coeff_sum);
-            result[k - 1][k - 1] = etas[k][k];
+            A_hat[k][k - 1] = sqrt(inner_products[k][k] - coeff_sum); // eta_k
+            cerr << "eta_" << k + 1 << "= A_hat[" << k << "][" << k - 1 << "] = " << A_hat[k][k - 1] << "\n";
 
-            /*
-            cerr << "eta term 1: " << sqrt(inner_products[k - 1][k - 1] - coeff_sum) << ", term 2: " << coeff_sum << "\n";
-            cerr << "eta_" << k << " = " << etas[k][k] << "\n";
-
-            complex<double> a = 0.747713;
-            complex<double> b = 0.0;
-            cerr << "\n Test : " << a - b << "\n";
-            */
             // Calculate gamma_{l,k}
             complex<double> gamma_products = 0.0;
 
-            for (luint i = 1; i <= k - 1; i++)
+            for (luint i = 0; i < k; i++)
             {
-                gamma_products += gammas[i][k - 1] * gammas[i][l];
+                gamma_products += conj(A_hat[i][k - 1]) * A_hat[i][l];
             }
 
-            gammas[k][l] = (inner_products[k - 1][l] / etas[k][k]) - (gamma_products / etas[k][k]);
-            result[k - 1][l] = gammas[k][l];
-
-            /*
-            cerr << "gamma_products = " << gamma_products << "\n";
-            cerr << "gamma term 1: " << (inner_products[k - 1][l] / etas[k][k]) << ", term 2: " << (gamma_products / etas[k][k]) << "\n";
-            cerr << "gamma_" << l << "," << k << " = " << gammas[k][l] << "\n";
-            */
+            A_hat[k][l] = (inner_products[k][l + 1] / A_hat[k][k - 1]) - (gamma_products / A_hat[k - 1][k]); // gamma_{l,k}
+            cerr << "gamma_{" << l + 1 << "," << k + 1 << "} = A_hat[" << k << "][" << l << "] = " << A_hat[k][l] << "\n\n";
         }
     }
 
-    cerr << "Calculated etas" << "\n";
-    for (const auto &r : etas)
+    /* The C_hat matrix from overleaf.
+        We want to remove the last column from A_hat and the place e1 as the first column in C_hat.
+    */
+    std::vector<std::vector<complex<double>>> I_gscb(d, std::vector<complex<double>>(d, 0)); // d + 1 because we want to check up to and including d.
+    I_gscb[0][0] = 1;
+
+    for (int i = 0; i < d; i++)
+    {
+        for (int j = 1; j < d; j++)
+        {
+            I_gscb[i][j] = A_hat[i][j - 1];
+        }
+    }
+
+    cerr << "Calculated A_hat" << "\n";
+    for (const auto &r : A_hat)
     {
         for (const auto &c : r)
         {
@@ -226,10 +235,10 @@ void NoiseExperiment::run_ddsim_noise()
         }
         std::cerr << "\n";
     }
-    std::cerr << "\n";
+    cerr << "\n";
 
-    cerr << "Calculated gammas" << "\n";
-    for (const auto &r : gammas)
+    cerr << "Calculated I_gscb" << "\n";
+    for (const auto &r : I_gscb)
     {
         for (const auto &c : r)
         {
@@ -237,18 +246,7 @@ void NoiseExperiment::run_ddsim_noise()
         }
         std::cerr << "\n";
     }
-    std::cerr << "\n";
-
-    cerr << "Final A matrix" << "\n";
-    for (const auto &r : result)
-    {
-        for (const auto &c : r)
-        {
-            std::cerr << c << ", ";
-        }
-        std::cerr << "\n";
-    }
-
+    cerr << "\n";
     /*This is just placeholder atm.*/
     clock_t a_iteration = clock();
     this->fidelity = this->calc_fidelity(obs); // Should be the fidelity between the result from the reduced system compared to what we are looking for.
