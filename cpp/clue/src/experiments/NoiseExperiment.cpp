@@ -164,7 +164,7 @@ void NoiseExperiment::run_ddsim_noise()
     }
     cerr << "\n";
 
-    std::vector<std::vector<complex<double>>> A_hat(d, std::vector<complex<double>>(d, 0)); // d + 1 because we want to check up to and including d.
+    dd::CMat A_hat(d, dd::CVec(d, 0));
 
     for (int i = 1; i <= d; i++)
     {
@@ -215,7 +215,7 @@ void NoiseExperiment::run_ddsim_noise()
     /* The C_hat matrix from overleaf.
         We want to remove the last column from A_hat and the place e1 as the first column in C_hat.
     */
-    std::vector<std::vector<complex<double>>> I_gscb(d, std::vector<complex<double>>(d, 0)); // d + 1 because we want to check up to and including d.
+    dd::CMat I_gscb(d, dd::CVec(d, 0));
     I_gscb[0][0] = 1;
 
     for (int i = 0; i < d; i++)
@@ -226,27 +226,13 @@ void NoiseExperiment::run_ddsim_noise()
         }
     }
 
-    cerr << "Calculated A_hat" << "\n";
-    for (const auto &r : A_hat)
-    {
-        for (const auto &c : r)
-        {
-            std::cerr << c << ", ";
-        }
-        std::cerr << "\n";
-    }
-    cerr << "\n";
+    // Not finished, need to calc the inverse of I_gscb
 
-    cerr << "Calculated I_gscb" << "\n";
-    for (const auto &r : I_gscb)
-    {
-        for (const auto &c : r)
-        {
-            std::cerr << c << ", ";
-        }
-        std::cerr << "\n";
-    }
-    cerr << "\n";
+    dd::CMat C_hat = matmul(A_hat, I_gscb);
+    cerr << "A_hat  = " << matrix_to_string(A_hat) << endl;
+    cerr << "I_gscb = " << matrix_to_string(I_gscb) << endl;
+    cerr << "C_hat  = " << matrix_to_string(C_hat) << endl;
+
     /*This is just placeholder atm.*/
     clock_t a_iteration = clock();
     this->fidelity = this->calc_fidelity(obs); // Should be the fidelity between the result from the reduced system compared to what we are looking for.
