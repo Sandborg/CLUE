@@ -117,7 +117,7 @@ void NoiseExperiment::run_ddsim_noise()
     luint d = 0;
     if (this->drg == 0)
     {
-        d = this->iterations; // If no guess is made, we just use the expected number of iterations to apply a circuit
+        d = this->iterations; // No guess is made, use the expected number of iterations to apply a circuit
     }
     else
     {
