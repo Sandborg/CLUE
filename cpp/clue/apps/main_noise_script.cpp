@@ -16,7 +16,7 @@
 
 using namespace std;
 
-NoiseExperiment *generate_example(string name, luint size, ExperimentType type, string observable, dd::Package<> *package, NoiseModel *noise_model, luint drg)
+NoiseExperiment *generate_example(string name, luint size, ExperimentType type, string observable, dd::Package<> *package, NoiseModel *noise_model, luint drg, luint samples)
 {
     string upper = boost::to_upper_copy<std::string>(name);
     /*
@@ -47,7 +47,7 @@ NoiseExperiment *generate_example(string name, luint size, ExperimentType type, 
          }
      }
     */
-    auto search = NoisyQuantumSearch::ones_string(size, type, package, noise_model, drg);
+    auto search = NoisyQuantumSearch::ones_string(size, type, package, noise_model, drg, samples);
     search->convert_succes_set_qstate();
     return search;
 }
@@ -70,7 +70,7 @@ vector<string> generate_observables(string observable, luint size)
     return result;
 }
 
-int main_script(string name, ExperimentType type, luint m, luint M, luint repeats, string observable, luint drg)
+int main_script(string name, ExperimentType type, luint m, luint M, luint repeats, string observable, luint drg, luint samples)
 {
     double total_time = 0.;
     ofstream out;
@@ -114,7 +114,7 @@ int main_script(string name, ExperimentType type, luint m, luint M, luint repeat
                     {
                         dd::Package<> *package = new dd::Package<>(size);
                         auto noise_model = new NoiseModel(depolarization_noise, phaseflip_noise, amp_damping_noise);
-                        NoiseExperiment *experiment = generate_example(name, size, type, obs, package, noise_model, drg);
+                        NoiseExperiment *experiment = generate_example(name, size, type, obs, package, noise_model, drg, samples);
                         cout << "##################################################################################" << endl;
                         cout << "Generated example\n\t" << experiment->to_string() << endl;
                         cout << "Current Errors: Depolarization: "
@@ -157,7 +157,8 @@ enum ArgumentValues
     max,
     repeats,
     observable,
-    drg
+    drg,
+    samples
 };
 
 std::map<std::string, ArgumentValues> create_argument_map()
@@ -169,7 +170,8 @@ std::map<std::string, ArgumentValues> create_argument_map()
     m["-repeats"] = ArgumentValues::repeats;
     m["-r"] = ArgumentValues::repeats;
     m["-obs"] = ArgumentValues::observable;
-    m["-drg"] = ArgumentValues::drg; // Dimension Reduction Guess
+    m["-drg"] = ArgumentValues::drg;         // Dimension Reduction Guess
+    m["-samples"] = ArgumentValues::samples; // Using samples to not close with M. The number of samples when calculating fidelities.
     return m;
 }
 static std::map<std::string, ArgumentValues> s_mapArgumentValues = create_argument_map();
@@ -184,6 +186,7 @@ int main(int argc, char **argv)
     luint m = 5, M = 5, repeats = 1;
     string observable = "H";
     luint d = 0;
+    luint samples = 5000;
 
     if (argc > 1)
     {
@@ -217,6 +220,10 @@ int main(int argc, char **argv)
                 d = stoul(argv[i + 1]);
                 i += 2;
                 break;
+            case ArgumentValues::samples:
+                samples = stoul(argv[i + 1]);
+                i += 2;
+                break;
             default:
                 cout << "Error in arguments: found " << argv[i];
                 return -1;
@@ -224,5 +231,5 @@ int main(int argc, char **argv)
         }
     }
 
-    return main_script(test, type, m, M, repeats, observable, d);
+    return main_script(test, type, m, M, repeats, observable, d, samples);
 }

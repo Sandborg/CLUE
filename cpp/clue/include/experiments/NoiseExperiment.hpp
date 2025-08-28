@@ -54,6 +54,7 @@ protected:
     dd::Package<> *package;  // dd::Package with the cache information for the size for  whole execution.
     NoiseModel *noise_model; // The noise model used to build the circuit with noise applied.
     luint drg;               // The dimension that we guess the reduction can be reduced to.
+    luint M;                 // The number of samples needed when calculating the inner products (fidelity)
 
     /* Execution attributes */
     bool executed = false;  // Flag indicating if the experiment has been executed or not
@@ -93,7 +94,7 @@ private:
 
 public:
     /** CONSTRUCTORS **/
-    NoiseExperiment(string eName, string eObservable, luint eIterations, ExperimentType eType, dd::Package<> *ePackage, NoiseModel *eNoiseModel, luint eDrg)
+    NoiseExperiment(string eName, string eObservable, luint eIterations, ExperimentType eType, dd::Package<> *ePackage, NoiseModel *eNoiseModel, luint eDrg, luint eM)
     {
         this->name = eName;
         this->observable = eObservable;
@@ -102,6 +103,7 @@ public:
         this->package = ePackage;
         this->noise_model = eNoiseModel;
         this->drg = eDrg;
+        this->M = eM;
     }
 
     virtual ~NoiseExperiment() = default;

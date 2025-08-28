@@ -48,7 +48,7 @@ qc::QuantumComputation *NoiseModel::build_noisy_qc(qc::QuantumComputation &qc)
 
     for (const auto &op : qc)
     {
-      
+
         // Step 1: Compute z1=U*z0, where z0 is the input (meaning we apply the correct gate)
         noisy_qc->emplace_back(op->clone());
 
@@ -102,4 +102,79 @@ qc::QuantumComputation *NoiseModel::build_noisy_qc(qc::QuantumComputation &qc)
     }
 
     return noisy_qc;
+}
+
+/*
+Main loops as presented by Max in overleaf text.
+In the text when seeing gamme_{l,k}, it it means we are looking at the k'th row and l'th column.
+
+For the scalar products in the text, < A^l, A^k>, where d >= l >= k, are calculated for all combinations,
+stored in the inner_products vector.
+
+So in the end, say we want <A²,A¹>, it's stored at inner_products[1][2].
+
+This part is confusingly made atm: The code starts from the second iteration.
+this means i don't use k - 1 in <A^k-1,A^k-1> for example, since k = 1 in this loop actually is k = 2 in the pseuodo code on overleaf
+On line 211, i use l + 1, because that vector is made so that indexes tell the number of times a circuit have been applied to a state,
+thus, inner_products[1][2] is <A²,A¹>, for this reason we have to use l + 1.
+*/
+dd::CMat get_A_hat(const std::vector<std::vector<dd::fp>> &inner_products)
+{
+
+    luint d = inner_products.size() - 1; // size - 1 because inner product matrix is 1 bigger than d.
+    dd::CMat A_hat(d, dd::CVec(d, 0));
+
+    for (int i = 1; i <= d; i++)
+    {
+        A_hat[0][i - 1] = inner_products[0][i];
+    }
+
+    for (luint k = 1; k < d; k++)
+    {
+        for (luint l = k; l < d; l++)
+        {
+            // Calculate eta_k
+            std::complex<double> coeff_sum = 0.0;
+            for (luint i = 0; i < k; i++)
+            {
+                coeff_sum += std::pow(std::abs(A_hat[i][k - 1]), 2);
+            }
+            A_hat[k][k - 1] = sqrt(inner_products[k][k] - coeff_sum); // eta_k
+            std::cerr << "eta_" << k + 1 << "= A_hat[" << k << "][" << k - 1 << "] = " << A_hat[k][k - 1] << "\n";
+
+            // Calculate gamma_{l,k}
+            std::complex<double> gamma_products = 0.0;
+
+            for (luint i = 0; i < k; i++)
+            {
+                gamma_products += std::conj(A_hat[i][k - 1]) * A_hat[i][l];
+            }
+
+            A_hat[k][l] = (inner_products[k][l + 1] / A_hat[k][k - 1]) - (gamma_products / A_hat[k - 1][k]); // gamma_{l,k}
+            std::cerr << "gamma_{" << l + 1 << "," << k + 1 << "} = A_hat[" << k << "][" << l << "] = " << A_hat[k][l] << "\n\n";
+        }
+    }
+
+    return A_hat;
+}
+
+/*
+We want to remove the last column from A_hat and the place e1 as the first column in I_gscb.
+*/
+dd::CMat get_I_gscb(const dd::CMat &A_hat)
+{
+
+    luint d = A_hat.size();
+    dd::CMat I_gscb(d, dd::CVec(d, 0));
+    I_gscb[0][0] = 1;
+
+    for (int i = 0; i < d; i++)
+    {
+        for (int j = 1; j < d; j++)
+        {
+            I_gscb[i][j] = A_hat[i][j - 1];
+        }
+    }
+
+    return I_gscb;
 }

@@ -88,11 +88,11 @@ void NoiseExperiment::run_ddsim_alone()
 }
 
 /*Method used to apply a circuit n times to a state*/
-void NoiseExperiment::sim_n_iterations(dd::vEdge &state, luint n)
+void NoiseExperiment::sim_n_iterations(dd::vEdge &state, luint iterations)
 {
     double par_value = 1. / (pow(2., static_cast<double>(this->size())) * static_cast<double>(10 * this->iterations));
 
-    for (luint i = 0; i < n; i++)
+    for (luint i = 0; i < iterations; i++)
     {
         // We need to create the circuit anew for each application of the circuit
         qc::QuantumComputation *U_P = this->quantum(par_value);
@@ -114,12 +114,6 @@ void NoiseExperiment::run_ddsim_noise()
     dd::vEdge obs = this->dd_observable();
     double par_value = 1. / (pow(2., static_cast<double>(this->size())) * static_cast<double>(10 * this->iterations));
 
-    cerr << "+++ [ddsim-noise @ " << this->name << "] Computing the iteration (U_P*U_B)^iterations..." << endl;
-    clock_t b_iteration = clock();
-
-    /*Setup for bisimulation: create a matrix with the inner product results.
-      In the beginning we can just guess what the best reduction is.
-    */
     luint d = 0;
     if (this->drg == 0)
     {
@@ -129,7 +123,14 @@ void NoiseExperiment::run_ddsim_noise()
     {
         d = this->drg; // A guess is made, try to reduce to this dimension.
     }
-    luint M = 5000; // The samples needed to make an accurate guess
+    luint M = this->M; // The samples needed to make an accurate guess
+
+    cerr << "+++ [ddsim-noise @ " << this->name << "] Computing the reduced system with dimension reduction guess " << d << ", using " << this->M << " Samples..." << endl;
+    clock_t b_iteration = clock();
+
+    /*
+    Setup for bisimulation: create a matrix with the inner product results.
+    */
     std::vector<std::vector<dd::fp>> inner_products(d + 1, std::vector<dd::fp>(d + 1, 0));
 
     cerr << "+++ Beginning calculation of inner products with d = " << d << "...\n";
@@ -143,8 +144,8 @@ void NoiseExperiment::run_ddsim_noise()
                 dd::vEdge w = obs;
                 dd::vEdge v = obs;
 
-                this->sim_n_iterations(w, k);
-                this->sim_n_iterations(v, l);
+                this->sim_n_iterations(w, k); // Applies the quantum circuit to |w> k times
+                this->sim_n_iterations(v, l); // Applies the quantum circuit to |v> k times
 
                 inner_products[k][l] += this->calc_fidelity(v, w);
             }
@@ -164,71 +165,10 @@ void NoiseExperiment::run_ddsim_noise()
     }
     cerr << "\n";
 
-    dd::CMat A_hat(d, dd::CVec(d, 0));
+    dd::CMat A_hat = get_A_hat(inner_products);
+    dd::CMat I_gscb = get_I_gscb(A_hat);
+    dd::CMat C_hat = matmul(A_hat, I_gscb); // Not finished, need to calc the inverse of I_gscb
 
-    for (int i = 1; i <= d; i++)
-    {
-        A_hat[0][i - 1] = inner_products[0][i];
-    }
-    cerr << "\n";
-
-    /*
-    Main loops as presented by Max in overleaf text.
-    In the text when seeing gamme_{l,k}, it it means we are looking at the k'th row and l'th column.
-
-    For the scalar products in the text, < A^l, A^k>, where d >= l >= k, are calculated for all combinations,
-    stored in the inner_products vector.
-
-    So in the, say we want <A²,A¹>, it's stored at inner_products[1][2].
-    */
-
-    // This part is confusingly made atm: The code starts from the second iteration.
-    // this means i don't use k - 1 in <A^k-1,A^k-1> for example, since k = 1 in this loop actually is k = 2 in the pseuodo code on overleaf
-    // On line 211, i use l + 1, because that vector is made so that indexes tell the number of times a circuit have been applied to a state,
-    // thus, inner_products[1][2] is <A²,A¹>, for this reason we have to use l + 1.
-    for (luint k = 1; k < d; k++)
-    {
-        for (luint l = k; l < d; l++)
-        {
-            // Calculate eta_k
-            complex<double> coeff_sum = 0.0;
-            for (luint i = 0; i < k; i++)
-            {
-                coeff_sum += std::pow(std::abs(A_hat[i][k - 1]), 2);
-            }
-            A_hat[k][k - 1] = sqrt(inner_products[k][k] - coeff_sum); // eta_k
-            cerr << "eta_" << k + 1 << "= A_hat[" << k << "][" << k - 1 << "] = " << A_hat[k][k - 1] << "\n";
-
-            // Calculate gamma_{l,k}
-            complex<double> gamma_products = 0.0;
-
-            for (luint i = 0; i < k; i++)
-            {
-                gamma_products += conj(A_hat[i][k - 1]) * A_hat[i][l];
-            }
-
-            A_hat[k][l] = (inner_products[k][l + 1] / A_hat[k][k - 1]) - (gamma_products / A_hat[k - 1][k]); // gamma_{l,k}
-            cerr << "gamma_{" << l + 1 << "," << k + 1 << "} = A_hat[" << k << "][" << l << "] = " << A_hat[k][l] << "\n\n";
-        }
-    }
-
-    /* The C_hat matrix from overleaf.
-        We want to remove the last column from A_hat and the place e1 as the first column in C_hat.
-    */
-    dd::CMat I_gscb(d, dd::CVec(d, 0));
-    I_gscb[0][0] = 1;
-
-    for (int i = 0; i < d; i++)
-    {
-        for (int j = 1; j < d; j++)
-        {
-            I_gscb[i][j] = A_hat[i][j - 1];
-        }
-    }
-
-    // Not finished, need to calc the inverse of I_gscb
-
-    dd::CMat C_hat = matmul(A_hat, I_gscb);
     cerr << "A_hat  = " << matrix_to_string(A_hat) << endl;
     cerr << "I_gscb = " << matrix_to_string(I_gscb) << endl;
     cerr << "C_hat  = " << matrix_to_string(C_hat) << endl;
