@@ -140,7 +140,7 @@ dd::CMat get_A_hat(const std::vector<std::vector<dd::fp>> &inner_products)
                 coeff_sum += std::pow(std::abs(A_hat[i][k - 1]), 2);
             }
             A_hat[k][k - 1] = sqrt(inner_products[k][k] - coeff_sum); // eta_k
-            std::cerr << "eta_" << k + 1 << "= A_hat[" << k << "][" << k - 1 << "] = " << A_hat[k][k - 1] << "\n";
+            // std::cerr << "eta_" << k + 1 << "= A_hat[" << k << "][" << k - 1 << "] = " << A_hat[k][k - 1] << "\n";
 
             // Calculate gamma_{l,k}
             std::complex<double> gamma_products = 0.0;
@@ -151,7 +151,7 @@ dd::CMat get_A_hat(const std::vector<std::vector<dd::fp>> &inner_products)
             }
 
             A_hat[k][l] = (inner_products[k][l + 1] / A_hat[k][k - 1]) - (gamma_products / A_hat[k - 1][k]); // gamma_{l,k}
-            std::cerr << "gamma_{" << l + 1 << "," << k + 1 << "} = A_hat[" << k << "][" << l << "] = " << A_hat[k][l] << "\n\n";
+            // std::cerr << "gamma_{" << l + 1 << "," << k + 1 << "} = A_hat[" << k << "][" << l << "] = " << A_hat[k][l] << "\n\n";
         }
     }
 

@@ -167,10 +167,14 @@ void NoiseExperiment::run_ddsim_noise()
 
     dd::CMat A_hat = get_A_hat(inner_products);
     dd::CMat I_gscb = get_I_gscb(A_hat);
-    dd::CMat C_hat = matmul(A_hat, I_gscb); // Not finished, need to calc the inverse of I_gscb
+    dd::CMat I_gscb_inverse = get_inverse(I_gscb);
+    auto test = matmul(I_gscb, I_gscb_inverse);
+    dd::CMat C_hat = matmul(A_hat, I_gscb_inverse);
 
     cerr << "A_hat  = " << matrix_to_string(A_hat) << endl;
     cerr << "I_gscb = " << matrix_to_string(I_gscb) << endl;
+    cerr << "I_gscb_inverse = " << matrix_to_string(I_gscb_inverse) << endl;
+    cerr << "I_gscb * I_gscb^-1 =" << matrix_to_string(test);
     cerr << "C_hat  = " << matrix_to_string(C_hat) << endl;
 
     /*This is just placeholder atm.*/
