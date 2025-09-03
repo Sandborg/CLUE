@@ -111,10 +111,7 @@ void NoiseExperiment::run_ddsim_noise()
     clock_t begin = clock();
     cerr << "+++ [ddsim-noise @ " << this->name << "] Setting up observable (" << this->observable << ") and system..." << endl;
     dd::vEdge obs = this->dd_observable();
-    auto obs_clue = this->clue_observable();
-    cerr << "CLUE obs: " << vector_to_string(obs_clue) << endl;
-    auto e_3 = get_ith_unit_vec(obs_clue.dimension(), 3);
-    cerr << "e_1 = " << vector_to_string(e_3) << "With dim = " << obs_clue.dimension() << endl;
+    CCSparseVector obs_clue = this->clue_observable();
     double par_value = 1. / (pow(2., static_cast<double>(this->size())) * static_cast<double>(10 * this->iterations));
 
     luint d = 0;
@@ -162,12 +159,20 @@ void NoiseExperiment::run_ddsim_noise()
     dd::CMat I_gscb_inverse = get_inverse(I_gscb);
     dd::CMat C_hat = matmul(A_hat, I_gscb_inverse);
 
-    CCSparseVector unit_vector = get_ith_unit_vec(C_hat.size(), 1);
-    dd::CVec test = unit_vector.to_list();
+    dd::CVec unit_vector = get_ith_unit_vec(C_hat.size(), 1);
+    auto unit_vector_transposed = transpose(unit_vector);
+    vector<CCSparseVector> obs_clue_test = {obs_clue};
+    auto test = sparse_to_dense(obs_clue_test);
 
-    cerr << "Test: " << vector_to_string(test);
+    auto obs_clue_transposed = transpose(test);
+
+    cerr << "Unit_vector = " << vector_to_string(unit_vector) << endl;
+    cerr << "Unit_vector^T = " << matrix_to_string(unit_vector_transposed) << endl;
 
     dd::CMat C_hat_to_kth_power = matrix_power(C_hat, d);
+    cerr << "C_hat  = " << matrix_to_string(C_hat) << endl;
+    cerr << "C_hat^" << d << " = " << matrix_to_string(C_hat_to_kth_power) << endl;
+    //    cerr << "C_hat^" << d << "*e_" << d << " = " << matrix_to_string(ans) << endl;
 
     /*
     cerr << "A_hat  = " << matrix_to_string(A_hat) << endl;
@@ -177,8 +182,6 @@ void NoiseExperiment::run_ddsim_noise()
     cerr << "Identity: " << matrix_to_string(identity);
     cerr << "I_gscb * I_gscb^-1 = I?: " << (test == identity) << endl;
     */
-    cerr << "C_hat  = " << matrix_to_string(C_hat) << endl;
-    cerr << "C_hat^" << d << " = " << matrix_to_string(C_hat_to_kth_power) << endl;
 
     /*This is just placeholder atm.*/
     clock_t a_iteration = clock();

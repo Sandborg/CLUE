@@ -342,14 +342,15 @@ dd::CMat matmul(vector<CCSparseVector> &A, vector<CCSparseVector> &B)
     return result;
 }
 
-CCSparseVector get_ith_unit_vec(const luint &dim, const luint &ith)
+dd::CVec get_ith_unit_vec(const luint &dim, const luint &ith)
 {
     if (ith < 1)
-    {
-        throw std::invalid_argument("There is no 0 unit vector");
-    }
-    auto result = CCSparseVector(dim);
-    result.set_value(ith - 1, CC(1));
+        throw std::logic_error("There is no 0 or negative unit vector");
+    else if (ith >= dim)
+        throw std::logic_error("Trying to get unit vector larger than dimension asked for.");
+
+    dd::CVec result(dim);
+    result[ith - 1] = CC(1);
 
     return result;
 }
@@ -404,6 +405,34 @@ dd::CMat matrix_power(vector<CCSparseVector> &M, luint t)
     return matrix_power(denseM, t);
 }
 
+dd::CMat transpose(const dd::CMat &M)
+{
+    luint new_rows = M[0].size(), new_cols = M.size();
+    dd::CMat result(new_rows, dd::CVec(new_cols));
+
+    for (luint i = 0; i < M.size(); i++)
+    {
+        for (luint j = 0; j < M[0].size(); j++)
+        {
+            result[j][i] = M[i][j];
+        }
+    }
+
+    return result;
+}
+
+dd::CMat transpose(const dd::CVec &V)
+{
+    luint new_dim = V.size();
+    dd::CMat result(new_dim, dd::CVec(1));
+
+    for (luint i = 0; i < new_dim; i++)
+    {
+        result[i][0] = V[i];
+    }
+
+    return result;
+}
 /******************************************************************************************************************/
 // DDSubspace
 double DDSubspace::norm(dd::vEdge *v)

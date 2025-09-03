@@ -185,6 +185,7 @@ bool is_diagonal(vector<CCSparseVector> &);
 
 dd::CVec get_diagonal(dd::CMat &);
 dd::CVec get_diagonal(vector<CCSparseVector> &);
+dd::CVec get_ith_unit_vec(const luint &, const luint &);
 
 bool is_square(dd::CMat &);
 bool is_square(vector<CCSparseVector> &);
@@ -200,7 +201,8 @@ dd::CMat identity_matrix(luint);
 dd::CMat matrix_power(dd::CMat &, luint);
 dd::CMat matrix_power(vector<CCSparseVector> &, luint);
 
-CCSparseVector get_ith_unit_vec(const luint &, const luint &);
+dd::CMat transpose(const dd::CMat &);
+dd::CMat transpose(const dd::CVec &);
 
 template <typename T>
 using InverseType = std::conditional_t<
