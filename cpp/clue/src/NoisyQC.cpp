@@ -1,5 +1,6 @@
 #include "NoisyQC.hpp"
 #include <random>
+#include "Types.hpp"
 
 NoiseModel::NoiseModel(double eP1, double eP2, double eP3)
 {
@@ -122,7 +123,7 @@ dd::CMat get_A_hat(const std::vector<std::vector<dd::fp>> &inner_products)
 {
 
     luint d = inner_products.size() - 1; // size - 1 because inner product matrix is 1 bigger than d.
-    dd::CMat A_hat(d, dd::CVec(d, 0));
+    dd::CMat A_hat(d, dd::CVec(d, clue::CC(0)));
 
     for (int i = 1; i <= d; i++)
     {
@@ -165,7 +166,7 @@ dd::CMat get_I_gscb(const dd::CMat &A_hat)
 {
 
     luint d = A_hat.size();
-    dd::CMat I_gscb(d, dd::CVec(d, 0));
+    dd::CMat I_gscb(d, dd::CVec(d, clue::CC(0)));
     I_gscb[0][0] = 1;
 
     for (int i = 0; i < d; i++)

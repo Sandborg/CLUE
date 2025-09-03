@@ -8,8 +8,7 @@
 
 // PROTECTED METHODS
 /* Method to get the observable for use with CLUE */
-CCSparseVector
-NoiseExperiment::clue_observable()
+CCSparseVector NoiseExperiment::clue_observable()
 {
     CCSparseVector result = CCSparseVector(static_cast<luint>(pow(2, this->size())));
     if (this->observable == "H")
@@ -112,6 +111,10 @@ void NoiseExperiment::run_ddsim_noise()
     clock_t begin = clock();
     cerr << "+++ [ddsim-noise @ " << this->name << "] Setting up observable (" << this->observable << ") and system..." << endl;
     dd::vEdge obs = this->dd_observable();
+    auto obs_clue = this->clue_observable();
+    cerr << "CLUE obs: " << vector_to_string(obs_clue) << endl;
+    auto e_3 = get_ith_unit_vec(obs_clue.dimension(), 3);
+    cerr << "e_1 = " << vector_to_string(e_3) << "With dim = " << obs_clue.dimension() << endl;
     double par_value = 1. / (pow(2., static_cast<double>(this->size())) * static_cast<double>(10 * this->iterations));
 
     luint d = 0;
@@ -154,28 +157,28 @@ void NoiseExperiment::run_ddsim_noise()
     }
     cerr << "Finished calculation of inner products, moving onto reduction... \n\n";
 
-    cerr << "Calculated inner products for <A^l,A^k>, with 0 <= k <= l <= " << d << "\n";
-    for (const auto &r : inner_products)
-    {
-        for (const auto &c : r)
-        {
-            std::cerr << c << ", ";
-        }
-        std::cerr << "\n";
-    }
-    cerr << "\n";
-
     dd::CMat A_hat = get_A_hat(inner_products);
     dd::CMat I_gscb = get_I_gscb(A_hat);
     dd::CMat I_gscb_inverse = get_inverse(I_gscb);
-    auto test = matmul(I_gscb, I_gscb_inverse);
     dd::CMat C_hat = matmul(A_hat, I_gscb_inverse);
 
+    CCSparseVector unit_vector = get_ith_unit_vec(C_hat.size(), 1);
+    dd::CVec test = unit_vector.to_list();
+
+    cerr << "Test: " << vector_to_string(test);
+
+    dd::CMat C_hat_to_kth_power = matrix_power(C_hat, d);
+
+    /*
     cerr << "A_hat  = " << matrix_to_string(A_hat) << endl;
     cerr << "I_gscb = " << matrix_to_string(I_gscb) << endl;
-    cerr << "I_gscb_inverse = " << matrix_to_string(I_gscb_inverse) << endl;
+    cerr << "I_gscb_inverse = " << matrix_to_string(I_gscb_inverse);
     cerr << "I_gscb * I_gscb^-1 =" << matrix_to_string(test);
+    cerr << "Identity: " << matrix_to_string(identity);
+    cerr << "I_gscb * I_gscb^-1 = I?: " << (test == identity) << endl;
+    */
     cerr << "C_hat  = " << matrix_to_string(C_hat) << endl;
+    cerr << "C_hat^" << d << " = " << matrix_to_string(C_hat_to_kth_power) << endl;
 
     /*This is just placeholder atm.*/
     clock_t a_iteration = clock();

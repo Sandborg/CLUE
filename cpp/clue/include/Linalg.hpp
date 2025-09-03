@@ -200,6 +200,8 @@ dd::CMat identity_matrix(luint);
 dd::CMat matrix_power(dd::CMat &, luint);
 dd::CMat matrix_power(vector<CCSparseVector> &, luint);
 
+CCSparseVector get_ith_unit_vec(const luint &, const luint &);
+
 template <typename T>
 using InverseType = std::conditional_t<
     std::is_same_v<T, int> || std::is_same_v<T, float>,
@@ -212,14 +214,14 @@ using InverseType = std::conditional_t<
 template <typename T>
 std::vector<std::vector<InverseType<T>>> get_inverse(std::vector<std::vector<T>> A_copy)
 {
-    using R = InverseType<T>; // result/storage type (may be promoted)
+    using R = InverseType<T>; // result type (may be promoted)
     const size_t n = A_copy.size();
 
     // Step 1: Validate square matrix
     if (n == 0 || A_copy[0].size() != n)
         throw std::invalid_argument("Matrix must be square.");
 
-    // Step 2: Make an R-typed working copy of A, and initialize inverse as identity
+    // Step 2: initialize inverse as identity
     std::vector<std::vector<R>> inv(n, std::vector<R>(n, R{}));
     for (size_t i = 0; i < n; ++i)
     {
@@ -269,7 +271,7 @@ std::vector<std::vector<InverseType<T>>> get_inverse(std::vector<std::vector<T>>
         for (size_t j = 0; j < n; j++)
         {
             A_copy[i][j] /= diag;
-            inv[i][j] /= diag; // apply same operation to inverse
+            inv[i][j] /= diag;
         }
 
         // Step 3e: Eliminate other rows
@@ -281,7 +283,7 @@ std::vector<std::vector<InverseType<T>>> get_inverse(std::vector<std::vector<T>>
                 for (size_t j = 0; j < n; j++)
                 {
                     A_copy[r][j] -= factor * A_copy[i][j];
-                    inv[r][j] -= factor * inv[i][j]; // apply same operation
+                    inv[r][j] -= factor * inv[i][j];
                 }
             }
         }
