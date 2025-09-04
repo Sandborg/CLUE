@@ -158,23 +158,32 @@ void NoiseExperiment::run_ddsim_noise()
     dd::CMat I_gscb = get_I_gscb(A_hat);
     dd::CMat I_gscb_inverse = get_inverse(I_gscb);
     dd::CMat C_hat = matmul(A_hat, I_gscb_inverse);
+    dd::CMat C_hat_T = transpose(C_hat);
+    cerr << "C_hat  = " << matrix_to_string(C_hat) << endl;
+    cerr << "C_hat_T  = " << matrix_to_string(C_hat_T) << endl;
 
-    dd::CVec unit_vector = get_ith_unit_vec(C_hat.size(), 1);
+    dd::CVec unit_vector = get_unit_vec(C_hat.size(), 1);
+    /*
     auto unit_vector_transposed = transpose(unit_vector);
     vector<CCSparseVector> obs_clue_test = {obs_clue};
     auto test = sparse_to_dense(obs_clue_test);
 
     auto obs_clue_transposed = transpose(test);
+    cerr << "obs_clue^T = " << matrix_to_string(obs_clue_transposed) << endl;
 
     cerr << "Unit_vector = " << vector_to_string(unit_vector) << endl;
     cerr << "Unit_vector^T = " << matrix_to_string(unit_vector_transposed) << endl;
 
-    dd::CMat C_hat_to_kth_power = matrix_power(C_hat, d);
-    cerr << "C_hat  = " << matrix_to_string(C_hat) << endl;
-    cerr << "C_hat^" << d << " = " << matrix_to_string(C_hat_to_kth_power) << endl;
-    //    cerr << "C_hat^" << d << "*e_" << d << " = " << matrix_to_string(ans) << endl;
+    auto unit_dense = get_density_matrix(unit_vector_transposed);
+    auto unit_dense_2 = get_density_matrix(unit_vector);
+    cerr << "Unit_vector^T to density = " << matrix_to_string(unit_dense) << endl;
+    cerr << "Unit_vector to density = " << matrix_to_string(unit_dense_2) << endl;
 
-    /*
+    // dd::CMat C_hat_to_kth_power = matrix_power(C_hat, d);
+    // cerr << "C_hat  = " << matrix_to_string(C_hat) << endl;
+    // cerr << "C_hat^" << d << " = " << matrix_to_string(C_hat_to_kth_power) << endl;
+    //     cerr << "C_hat^" << d << "*e_" << d << " = " << matrix_to_string(ans) << endl;
+
     cerr << "A_hat  = " << matrix_to_string(A_hat) << endl;
     cerr << "I_gscb = " << matrix_to_string(I_gscb) << endl;
     cerr << "I_gscb_inverse = " << matrix_to_string(I_gscb_inverse);

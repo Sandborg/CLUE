@@ -342,15 +342,49 @@ dd::CMat matmul(vector<CCSparseVector> &A, vector<CCSparseVector> &B)
     return result;
 }
 
-dd::CVec get_ith_unit_vec(const luint &dim, const luint &ith)
+dd::CVec get_unit_vec(const luint &dim, const luint &ith)
 {
     if (ith < 1)
         throw std::logic_error("There is no 0 or negative unit vector");
-    else if (ith >= dim)
+    else if (ith > dim)
         throw std::logic_error("Trying to get unit vector larger than dimension asked for.");
 
     dd::CVec result(dim);
     result[ith - 1] = CC(1);
+
+    return result;
+}
+
+/*
+Create the density matrix based on a vector represented as CVec.
+*/
+dd::CMat get_density_matrix(dd::CVec &V)
+{
+    if (V.empty())
+        throw std::logic_error("The vector is empty");
+
+    dd::CMat M = {V};
+    dd::CMat other = transpose(V);
+
+    auto result = matmul(other, M);
+    return result;
+}
+
+/*
+Create the density matrix based on a vector represented as CMat. This happens when we for example transpose a vector.
+*/
+dd::CMat get_density_matrix(dd::CMat &M)
+{
+    if ((M.size() > 1 && M[0].size() > 1) || M.empty())
+        throw std::logic_error("The input is not a vector or it's empty");
+
+    auto other = transpose(M);
+    dd::CMat result;
+
+    if (M.size() == 1)
+        result = matmul(other, M);
+    else
+        result = matmul(M, other);
 
     return result;
 }

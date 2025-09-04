@@ -185,7 +185,9 @@ bool is_diagonal(vector<CCSparseVector> &);
 
 dd::CVec get_diagonal(dd::CMat &);
 dd::CVec get_diagonal(vector<CCSparseVector> &);
-dd::CVec get_ith_unit_vec(const luint &, const luint &);
+dd::CVec get_unit_vec(const luint &, const luint &);
+dd::CMat get_density_matrix(dd::CMat &);
+dd::CMat get_density_matrix(dd::CVec &);
 
 bool is_square(dd::CMat &);
 bool is_square(vector<CCSparseVector> &);

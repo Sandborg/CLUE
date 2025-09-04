@@ -116,7 +116,7 @@ int main_script(string name, ExperimentType type, luint m, luint M, luint repeat
                         auto noise_model = new NoiseModel(depolarization_noise, phaseflip_noise, amp_damping_noise);
                         NoiseExperiment *experiment = generate_example(name, size, type, obs, package, noise_model, drg, samples);
                         cout << "##################################################################################" << endl;
-                        cout << "Generated example\n\t" << experiment->to_string() << endl;
+                        cout << "Generated example:\t" << experiment->to_string() << endl;
                         cout << "Current Errors: Depolarization: "
                              << depolarization_noise
                              << ", Amplitude Damping: "
