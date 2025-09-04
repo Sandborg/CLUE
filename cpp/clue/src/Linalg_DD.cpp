@@ -441,6 +441,9 @@ dd::CMat matrix_power(vector<CCSparseVector> &M, luint t)
 
 dd::CMat transpose(const dd::CMat &M)
 {
+    if (M.empty())
+        throw std::logic_error("The matrix is empty");
+
     luint new_rows = M[0].size(), new_cols = M.size();
     dd::CMat result(new_rows, dd::CVec(new_cols));
 
@@ -457,6 +460,9 @@ dd::CMat transpose(const dd::CMat &M)
 
 dd::CMat transpose(const dd::CVec &V)
 {
+    if (V.empty())
+        throw std::logic_error("The vector is empty");
+
     luint new_dim = V.size();
     dd::CMat result(new_dim, dd::CVec(1));
 

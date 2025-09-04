@@ -158,11 +158,16 @@ void NoiseExperiment::run_ddsim_noise()
     dd::CMat I_gscb = get_I_gscb(A_hat);
     dd::CMat I_gscb_inverse = get_inverse(I_gscb);
     dd::CMat C_hat = matmul(A_hat, I_gscb_inverse);
-    dd::CMat C_hat_T = transpose(C_hat);
+    dd::CMat C_hat_k = matrix_power(C_hat, d);
     cerr << "C_hat  = " << matrix_to_string(C_hat) << endl;
-    cerr << "C_hat_T  = " << matrix_to_string(C_hat_T) << endl;
+    cerr << "C_hat^" << d << "  = " << matrix_to_string(C_hat_k) << endl;
 
     dd::CVec unit_vector = get_unit_vec(C_hat.size(), 1);
+    dd::CMat unit_vector_T = transpose(unit_vector);
+    cerr << "Unit vector" << matrix_to_string(unit_vector_T) << endl;
+
+    dd::CMat C_hat_e_1 = matmul(C_hat_k, unit_vector_T);
+    cerr << "C_hat^" << d << " * e_1  = " << matrix_to_string(C_hat_e_1) << endl;
     /*
     auto unit_vector_transposed = transpose(unit_vector);
     vector<CCSparseVector> obs_clue_test = {obs_clue};
