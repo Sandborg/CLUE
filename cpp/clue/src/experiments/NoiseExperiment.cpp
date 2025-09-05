@@ -105,6 +105,32 @@ void NoiseExperiment::sim_n_iterations(dd::vEdge &state, luint iterations)
     return;
 }
 
+std::vector<std::vector<dd::fp>> NoiseExperiment::collect_inner_products(const dd::vEdge &obs, luint dim, luint samples)
+{
+    std::vector<std::vector<dd::fp>> inner_products(dim + 1, std::vector<dd::fp>(dim + 1, 0));
+
+    for (luint k = 0; k <= dim; k++)
+    {
+        for (luint l = k; l <= dim; l++)
+        {
+            cerr << "Currently working on k = " << k << ", l = " << l << "\n";
+            for (luint m = 0; m < M; m++)
+            {
+                dd::vEdge w = obs;
+                dd::vEdge v = obs;
+
+                this->sim_n_iterations(w, k); // Applies the quantum circuit to |w> k times
+                this->sim_n_iterations(v, l); // Applies the quantum circuit to |v> k times
+
+                inner_products[k][l] += this->calc_fidelity(v, w);
+            }
+            inner_products[k][l] /= M;
+        }
+    }
+
+    return inner_products;
+}
+
 void NoiseExperiment::run_ddsim_noise()
 {
     cerr << "+++ [ddsim-noise @ " << this->name << "] Computing DDSIM NOISY  execution for " << this->name << endl;
@@ -129,29 +155,10 @@ void NoiseExperiment::run_ddsim_noise()
     clock_t b_iteration = clock();
 
     /*
-    Setup for bisimulation: create a matrix with the inner product results.
+    Setup for reduction: create a matrix with the inner product results.
     */
-    std::vector<std::vector<dd::fp>> inner_products(d + 1, std::vector<dd::fp>(d + 1, 0));
-
     cerr << "+++ Beginning calculation of inner products with d = " << d << "...\n";
-    for (luint k = 0; k <= d; k++)
-    {
-        for (luint l = k; l <= d; l++)
-        {
-            cerr << "Currently working on k = " << k << ", l = " << l << "\n";
-            for (luint m = 0; m < M; m++)
-            {
-                dd::vEdge w = obs;
-                dd::vEdge v = obs;
-
-                this->sim_n_iterations(w, k); // Applies the quantum circuit to |w> k times
-                this->sim_n_iterations(v, l); // Applies the quantum circuit to |v> k times
-
-                inner_products[k][l] += this->calc_fidelity(v, w);
-            }
-            inner_products[k][l] /= M;
-        }
-    }
+    auto inner_products = collect_inner_products(obs, d, M);
     cerr << "Finished calculation of inner products, moving onto reduction... \n\n";
 
     dd::CMat A_hat = get_A_hat(inner_products);
@@ -159,43 +166,12 @@ void NoiseExperiment::run_ddsim_noise()
     dd::CMat I_gscb_inverse = get_inverse(I_gscb);
     dd::CMat C_hat = matmul(A_hat, I_gscb_inverse);
     dd::CMat C_hat_k = matrix_power(C_hat, d);
-    cerr << "C_hat  = " << matrix_to_string(C_hat) << endl;
-    cerr << "C_hat^" << d << "  = " << matrix_to_string(C_hat_k) << endl;
+    dd::CVec C_hat_e1(d);
 
-    dd::CVec unit_vector = get_unit_vec(C_hat.size(), 1);
-    dd::CMat unit_vector_T = transpose(unit_vector);
-    cerr << "Unit vector" << matrix_to_string(unit_vector_T) << endl;
-
-    dd::CMat C_hat_e_1 = matmul(C_hat_k, unit_vector_T);
-    cerr << "C_hat^" << d << " * e_1  = " << matrix_to_string(C_hat_e_1) << endl;
-    /*
-    auto unit_vector_transposed = transpose(unit_vector);
-    vector<CCSparseVector> obs_clue_test = {obs_clue};
-    auto test = sparse_to_dense(obs_clue_test);
-
-    auto obs_clue_transposed = transpose(test);
-    cerr << "obs_clue^T = " << matrix_to_string(obs_clue_transposed) << endl;
-
-    cerr << "Unit_vector = " << vector_to_string(unit_vector) << endl;
-    cerr << "Unit_vector^T = " << matrix_to_string(unit_vector_transposed) << endl;
-
-    auto unit_dense = get_density_matrix(unit_vector_transposed);
-    auto unit_dense_2 = get_density_matrix(unit_vector);
-    cerr << "Unit_vector^T to density = " << matrix_to_string(unit_dense) << endl;
-    cerr << "Unit_vector to density = " << matrix_to_string(unit_dense_2) << endl;
-
-    // dd::CMat C_hat_to_kth_power = matrix_power(C_hat, d);
-    // cerr << "C_hat  = " << matrix_to_string(C_hat) << endl;
-    // cerr << "C_hat^" << d << " = " << matrix_to_string(C_hat_to_kth_power) << endl;
-    //     cerr << "C_hat^" << d << "*e_" << d << " = " << matrix_to_string(ans) << endl;
-
-    cerr << "A_hat  = " << matrix_to_string(A_hat) << endl;
-    cerr << "I_gscb = " << matrix_to_string(I_gscb) << endl;
-    cerr << "I_gscb_inverse = " << matrix_to_string(I_gscb_inverse);
-    cerr << "I_gscb * I_gscb^-1 =" << matrix_to_string(test);
-    cerr << "Identity: " << matrix_to_string(identity);
-    cerr << "I_gscb * I_gscb^-1 = I?: " << (test == identity) << endl;
-    */
+    for (int i = 0; i < C_hat_k.size(); i++)
+    {
+        C_hat_e1[i] = C_hat_k[i][0];
+    }
 
     /*This is just placeholder atm.*/
     clock_t a_iteration = clock();
