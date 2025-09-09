@@ -30,6 +30,5 @@ public:
 };
 
 /* Methods for bisimulation of noisy matrices*/
-
 dd::CMat get_A_hat(const std::vector<std::vector<dd::fp>> &);
 dd::CMat get_I_gscb(const dd::CMat &);

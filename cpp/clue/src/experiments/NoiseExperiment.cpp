@@ -137,7 +137,6 @@ void NoiseExperiment::run_ddsim_noise()
     clock_t begin = clock();
     cerr << "+++ [ddsim-noise @ " << this->name << "] Setting up observable (" << this->observable << ") and system..." << endl;
     dd::vEdge obs = this->dd_observable();
-    CCSparseVector obs_clue = this->clue_observable();
     double par_value = 1. / (pow(2., static_cast<double>(this->size())) * static_cast<double>(10 * this->iterations));
 
     luint d = 0;
@@ -157,30 +156,72 @@ void NoiseExperiment::run_ddsim_noise()
     /*
     Setup for reduction: create a matrix with the inner product results.
     */
-    cerr << "+++ Beginning calculation of inner products with d = " << d << "...\n";
+
+    clock_t r_begin = clock();
+    cerr << "+++ [ddsim-noise @ " << this->name << "] Beginning calculation of inner products with d = " << d << "...\n";
     auto inner_products = collect_inner_products(obs, d, M);
-    cerr << "Finished calculation of inner products, moving onto reduction... \n\n";
+    cerr << "+++ [ddsim-noise @ " << this->name << "] Finished calculation of inner products, moving onto reduction... \n\n";
 
-    dd::CMat A_hat = get_A_hat(inner_products);
-    dd::CMat I_gscb = get_I_gscb(A_hat);
+    dd::CMat Ahat = get_A_hat(inner_products);
+    dd::CMat I_gscb = get_I_gscb(Ahat);
     dd::CMat I_gscb_inverse = get_inverse(I_gscb);
-    dd::CMat C_hat = matmul(A_hat, I_gscb_inverse);
-    dd::CMat C_hat_k = matrix_power(C_hat, d);
-    dd::CVec C_hat_e1(d);
+    dd::CMat Chat = matmul(Ahat, I_gscb_inverse);
+    dd::CMat Chat_k = matrix_power(Chat, d);
+    dd::CVec Chat_e1(d);
 
-    for (int i = 0; i < C_hat_k.size(); i++)
+    // We collect the first column in Chat. This is faster than calling matmul.
+    for (luint i = 0; i < d; i++)
     {
-        C_hat_e1[i] = C_hat_k[i][0];
+        Chat_e1[i] = Chat_k[i][0];
     }
 
+    dd::CVec results(d + 1);
+    CC result = CC(0);
+
+    cerr << "Ahat: " << matrix_to_string(Ahat) << endl;
+    cerr << "+++ [ddsim-noise @ " << this->name << "] Beginning calculation of fidelity..." << endl;
+    for (luint i = 1; i <= d; i++)
+    {
+        auto eta = I_gscb[i - 1][i - 1]; // We use I_gscb here since that have all the eta in a convinient placement
+        cerr << "eta_" << i << " = " << eta << endl;
+        dd::fp avg_fid = 0;
+        cerr << "Starting calculating <w, A^" << i - 1 << ">..." << endl;
+        for (luint m = 0; m < M; m++)
+        {
+            dd::vEdge v = obs;
+            sim_n_iterations(obs, i - 1);
+            avg_fid += this->calc_fidelity(obs);
+        }
+        cerr << "Finished calculating <w, A^" << i - 1 << ">..." << endl;
+        avg_fid /= M;
+
+        CC t1 = (CC(1) / eta) * avg_fid;
+
+        CC t2_sum = 0;
+        for (luint k = 0; k < i - 1; k++)
+        {
+            t2_sum += Ahat[k][i - 1] * results[k]; // We use Ahat here for the gamma's, since they are placed nicely here.
+            cerr << "Ahat[k][j-1] = Ahat[" << k + 1 << "][" << i << "] = " << Ahat[k][i - 1] << endl;
+        }
+
+        CC t2 = (CC(1) / eta) * t2_sum;
+
+        cerr << "t1 = " << t1 << ", t2 = " << t2 << endl;
+        results[i - 1] = t1 - t2;
+        result += results[i - 1];
+        cerr << "Results[" << i - 1 << "] = " << results[i - 1] << endl;
+    }
+
+    cerr << "The fidelity is between the expected state and the reduced result is: " << result << endl;
     /*This is just placeholder atm.*/
     clock_t a_iteration = clock();
-    this->fidelity = this->calc_fidelity(obs); // Should be the fidelity between the result from the reduced system compared to what we are looking for.
+    clock_t r_end = clock();
+    this->fidelity = result.real(); // Should be the fidelity between the result from the reduced system compared to what we are looking for.
     cerr << "The fidelity between the expected state and the result from the simulation: " << this->fidelity << endl;
     clock_t end = clock();
 
     // We store the data
-    this->red_time = 0.0;
+    this->red_time = time_to_double(r_begin, r_end);
     this->it_time = time_to_double(b_iteration, a_iteration);
     this->tot_time = time_to_double(begin, end);
 
