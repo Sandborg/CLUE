@@ -92,6 +92,7 @@ private:
     /*Method used to apply a circuit n times to a state*/
     void sim_n_iterations(dd::vEdge &, luint iterations);
     std::vector<std::vector<dd::fp>> collect_inner_products(const dd::vEdge &, luint, luint);
+    std::vector<dd::fp> collect_expected_inner_products(const dd::vEdge &, luint, luint);
 
 public:
     /** CONSTRUCTORS **/
