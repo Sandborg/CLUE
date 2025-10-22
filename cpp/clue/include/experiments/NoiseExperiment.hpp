@@ -92,6 +92,7 @@ private:
     /* Method to get the fidelity between expected result and succes state (might only be useful for Grover?)*/
     virtual dd::fp calc_fidelity(dd::vEdge) = 0;                // Used when we want to compare the result of a simulation to the goal state
     virtual dd::fp calc_fidelity(dd::vEdge &, dd::vEdge &) = 0; // Used when we want to calc the fidelity between two state, e.g. when wanting to calculate <A^l \rho, A^k \rho>.
+    dd::fp bisim_fidelity(dd::CMat &, dd::CMat &, dd::CVec &, vector<dd::fp> &);
 
 public:
     /** CONSTRUCTORS **/

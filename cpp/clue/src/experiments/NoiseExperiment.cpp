@@ -48,6 +48,36 @@ dd::vEdge NoiseExperiment::dd_observable()
 }
 
 // PRIVATE METHODS
+/* Method that implements theorem 2 from Noise-Aware Quantum Bisimulation*/
+dd::fp NoiseExperiment::bisim_fidelity(dd::CMat &Ahat, dd::CMat &I_gscb, dd::CVec &Chat_e1, vector<dd::fp> &expected_fids)
+{
+    auto d = Chat_e1.size();
+    dd::CVec results(d + 1);
+    CC result = CC(0);
+
+    cerr << "+++ [ddsim-noise @ " << this->name << "] Beginning calculation of fidelity..." << endl;
+    for (luint i = 1; i <= d; i++)
+    {
+        auto eta = I_gscb[i - 1][i - 1]; // We use I_gscb here since that have all the eta in a convinient placement
+
+        CC t1 = (CC(1) / eta) * expected_fids[i - 1];
+
+        CC t2_sum = 0;
+        for (luint k = 0; k < i - 1; k++)
+        {
+            t2_sum += Ahat[k][i - 1] * results[k]; // We use Ahat here for the gamma's, since they are placed nicely here.
+                                                   //   cerr << "Ahat[k][j-1] = Ahat[" << k + 1 << "][" << i << "] = " << Ahat[k][i - 1] << endl;
+        }
+
+        CC t2 = (CC(1) / eta) * t2_sum;
+
+        results[i - 1] = t1 - t2;
+        result += Chat_e1[i - 1] * (t1 - t2);
+    }
+
+    return result.real();
+}
+
 /* Method that runs simulation of a circuit without any reduction. Collects fidelity between success state and outcome
 (only used when this->type == DDSIM_ALONE) */
 void NoiseExperiment::run_ddsim_alone()
@@ -209,7 +239,6 @@ void NoiseExperiment::run_ddsim_noise()
     /*
     Setup for reduction: create a matrix with the inner product results.
     */
-
     clock_t r_begin = clock();
     cerr << "+++ [ddsim-noise @ " << this->name << "] Beginning calculation of inner products with d = " << d << "...\n";
     auto inner_products = collect_inner_products(obs, d, M);
@@ -255,35 +284,10 @@ void NoiseExperiment::run_ddsim_noise()
     cerr << "Chat^k: " << matrix_to_string(Chat_k) << endl;
     cerr << "Chat_e1: " << vector_to_string(Chat_e1) << endl;
 
-    dd::CVec results(d + 1);
-    CC result = CC(0);
-
-    cerr << "+++ [ddsim-noise @ " << this->name << "] Beginning calculation of fidelity..." << endl;
-    for (luint i = 1; i <= d; i++)
-    {
-        auto eta = I_gscb[i - 1][i - 1]; // We use I_gscb here since that have all the eta in a convinient placement
-
-        CC t1 = (CC(1) / eta) * avg_expected_fids[i - 1];
-
-        CC t2_sum = 0;
-        for (luint k = 0; k < i - 1; k++)
-        {
-            t2_sum += Ahat[k][i - 1] * results[k]; // We use Ahat here for the gamma's, since they are placed nicely here.
-                                                   //   cerr << "Ahat[k][j-1] = Ahat[" << k + 1 << "][" << i << "] = " << Ahat[k][i - 1] << endl;
-        }
-
-        CC t2 = (CC(1) / eta) * t2_sum;
-
-        // cerr << "t1 = " << t1 << ", t2 = " << t2 << endl;
-        results[i - 1] = t1 - t2;
-        result += Chat_e1[i - 1] * (t1 - t2);
-        // cerr << "Results[" << i - 1 << "] = " << results[i - 1] << endl;
-    }
-
     /*This is just placeholder atm.*/
     clock_t a_iteration = clock();
     clock_t r_end = clock();
-    this->fidelity = result.real(); // Should be the fidelity between the result from the reduced system compared to what we are looking for.
+    this->fidelity = bisim_fidelity(Ahat, I_gscb, Chat_e1, avg_expected_fids); // Should be the fidelity between the result from the reduced system compared to what we are looking for.
     // this->fidelity = 0; // Should be the fidelity between the result from the reduced system compared to what we are looking for.
     cerr << "The fidelity between the expected state and the result from the simulation: " << this->fidelity << endl;
     clock_t end = clock();
