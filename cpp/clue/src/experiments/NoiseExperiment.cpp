@@ -111,7 +111,7 @@ std::vector<std::vector<dd::fp>> NoiseExperiment::collect_inner_products(const d
 
     double par_value = 1. / (pow(2., static_cast<double>(this->size())) * static_cast<double>(10 * this->iterations));
 
-    for (luint m = 0; m < M; m++)
+    for (luint m = 0; m < samples; m++)
     {
         if (m % 250 == 0 || m == 0)
             cerr << "Currently working on m = " << m + 1 << "\n";
@@ -148,26 +148,6 @@ std::vector<std::vector<dd::fp>> NoiseExperiment::collect_inner_products(const d
     for (auto &row : inner_products)
         for (auto &x : row)
             x /= M;
-    /*
-    for (luint k = 0; k <= dim; k++)
-    {
-        for (luint l = k; l <= dim; l++)
-        {
-            cerr << "Currently working on k = " << k << ", l = " << l << "\n";
-            for (luint m = 0; m < M; m++)
-            {
-                dd::vEdge w = obs;
-                dd::vEdge v = obs;
-
-                this->sim_n_iterations(w, k); // Applies the quantum circuit to |w> k times
-                this->sim_n_iterations(v, l); // Applies the quantum circuit to |v> k times
-
-                inner_products[k][l] += this->calc_fidelity(v, w);
-            }
-            inner_products[k][l] /= M;
-        }
-    }
-        */
 
     return inner_products;
 }
@@ -177,7 +157,7 @@ std::vector<dd::fp> NoiseExperiment::collect_expected_inner_products(const dd::v
     std::vector<dd::fp> inner_products(dim, 0);
     double par_value = 1. / (pow(2., static_cast<double>(this->size())) * static_cast<double>(10 * this->iterations));
 
-    for (luint m = 0; m < M; m++)
+    for (luint m = 0; m < samples; m++)
     {
         if (m % 250 == 0 || m == 0)
             cerr << "Currently working on m = " << m + 1 << "\n";
@@ -197,23 +177,10 @@ std::vector<dd::fp> NoiseExperiment::collect_expected_inner_products(const dd::v
             inner_products[k] += this->calc_fidelity(curr);
         }
     }
+
     for (auto &x : inner_products)
         x /= M;
-    /*
-    for (luint k = 0; k < dim; k++)
-    {
-        cerr << "Currently working on k = " << k << "\n";
-        for (luint m = 0; m < M; m++)
-        {
-            dd::vEdge w = obs;
 
-            this->sim_n_iterations(w, k); // Applies the quantum circuit to |w> k times
-
-            inner_products[k] += this->calc_fidelity(w);
-        }
-        inner_products[k] /= M;
-    }
-*/
     return inner_products;
 }
 
@@ -250,6 +217,7 @@ void NoiseExperiment::run_ddsim_noise()
     cerr << "+++ [ddsim-noise @ " << this->name << "] Beginning calculation of expected inner products with d = " << d << "...\n";
     auto avg_expected_fids = collect_expected_inner_products(obs, d, M);
     cerr << "+++ [ddsim-noise @ " << this->name << "] Finished calculation of expected inner products, moving onto reduction... \n\n";
+
     cerr << "IP1: " << endl;
     for (const auto &r : inner_products)
     {
@@ -267,11 +235,12 @@ void NoiseExperiment::run_ddsim_noise()
 
     cerr << "\n";
 
-    dd::CMat Ahat = get_A_hat(inner_products);
+    dd::CMat Ahat = collect_eta_gamma(inner_products);
+    // dd::CMat Ahat = get_A_hat(inner_products);
     dd::CMat I_gscb = get_I_gscb(Ahat);
     dd::CMat I_gscb_inverse = get_inverse(I_gscb);
     dd::CMat Chat = matmul(Ahat, I_gscb_inverse);
-    dd::CMat Chat_k = matrix_power(Chat, d);
+    dd::CMat Chat_k = matrix_power(Chat, this->iterations);
     dd::CVec Chat_e1(d);
 
     // We collect the first column in Chat. This is faster than calling matmul.
@@ -279,16 +248,20 @@ void NoiseExperiment::run_ddsim_noise()
     {
         Chat_e1[i] = Chat_k[i][0];
     }
+    cerr << "Ahat: " << matrix_to_string(Ahat) << endl;
+    cerr << "I_gscb: " << matrix_to_string(I_gscb) << endl;
+    cerr << "I_gscb^-1: " << matrix_to_string(I_gscb_inverse) << endl;
+    cerr << "Chat: " << matrix_to_string(Chat) << endl;
+    cerr << "Chat^k: " << matrix_to_string(Chat_k) << endl;
+    cerr << "Chat_e1: " << vector_to_string(Chat_e1) << endl;
 
     dd::CVec results(d + 1);
     CC result = CC(0);
 
-    // cerr << "Ahat: " << matrix_to_string(Ahat) << endl;
     cerr << "+++ [ddsim-noise @ " << this->name << "] Beginning calculation of fidelity..." << endl;
     for (luint i = 1; i <= d; i++)
     {
         auto eta = I_gscb[i - 1][i - 1]; // We use I_gscb here since that have all the eta in a convinient placement
-        // cerr << "eta_" << i << " = " << eta << endl;
 
         CC t1 = (CC(1) / eta) * avg_expected_fids[i - 1];
 
@@ -303,7 +276,7 @@ void NoiseExperiment::run_ddsim_noise()
 
         // cerr << "t1 = " << t1 << ", t2 = " << t2 << endl;
         results[i - 1] = t1 - t2;
-        result += results[i - 1];
+        result += Chat_e1[i - 1] * (t1 - t2);
         // cerr << "Results[" << i - 1 << "] = " << results[i - 1] << endl;
     }
 
@@ -311,6 +284,7 @@ void NoiseExperiment::run_ddsim_noise()
     clock_t a_iteration = clock();
     clock_t r_end = clock();
     this->fidelity = result.real(); // Should be the fidelity between the result from the reduced system compared to what we are looking for.
+    // this->fidelity = 0; // Should be the fidelity between the result from the reduced system compared to what we are looking for.
     cerr << "The fidelity between the expected state and the result from the simulation: " << this->fidelity << endl;
     clock_t end = clock();
 

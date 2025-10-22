@@ -98,7 +98,7 @@ int main_script(string name, ExperimentType type, luint m, luint M, luint repeat
       // For each size we also go from starting to finishing epsilon values.
 
         double starting = 0.001;
-        double finishing = 0.01;
+        double finishing = 0.001;
         double depolarization_noise = starting;
         double phaseflip_noise = 0.001;
         double amp_damping_noise = 0.002;
@@ -185,7 +185,7 @@ int main(int argc, char **argv)
 
     luint m = 5, M = 5, repeats = 1;
     string observable = "H";
-    luint d = 3;
+    luint d = 0;
     luint samples = 5000;
 
     if (argc > 1)

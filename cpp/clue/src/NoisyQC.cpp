@@ -105,6 +105,65 @@ qc::QuantumComputation *NoiseModel::build_noisy_qc(qc::QuantumComputation &qc)
     return noisy_qc;
 }
 
+dd::CMat collect_eta_gamma(const std::vector<std::vector<dd::fp>> &inner_products)
+{
+    luint d = inner_products.size() - 1; // size - 1 because inner product matrix is 1 bigger than d.
+    dd::CMat A_hat(d, dd::CVec(d, clue::CC(0)));
+
+    for (luint i = 0; i < d; i++)
+    {
+        A_hat[0][i] = inner_products[0][i + 1];
+    }
+
+    for (int k = 1; k < d; k++)
+    {
+        std::cerr << "k = " << k + 1 << std::endl;
+        // Calculate eta_k
+        std::complex<double> coeff_sum = 0.0;
+        for (int i = 0; i <= k - 1; i++)
+        {
+            auto temp = std::pow(std::abs(A_hat[i][k - 1]), 2);
+            std::cerr << "Ahat[" << i << "][" << k - 1 << "] = " << A_hat[i][k - 1] << " result: " << temp << std::endl;
+            // std::cerr << "coeff_sum k = " << k << " and i = " << i << std::endl;
+            coeff_sum += temp;
+        }
+        std::cerr << "coeff_sum = " << coeff_sum << std::endl;
+
+        std::cerr << "<A^" << k << ", A^" << k << "> = " << inner_products[k][k] << std::endl;
+        auto eta_squared = inner_products[k][k] - coeff_sum;
+
+        if (eta_squared.real() < 0)
+            eta_squared *= -1;
+
+        A_hat[k][k - 1] = sqrt(eta_squared); // eta_k
+        // std::cerr << "eta_" << k + 1 << " = A_hat[" << k << "][" << k - 1 << "] = " << A_hat[k][k - 1] << "\n\n";
+        std::cerr << "eta_" << k + 1 << " = " << inner_products[k][k] << " - " << coeff_sum << " = " << eta_squared << " = A_hat[" << k << "][" << k - 1 << "] = " << A_hat[k][k - 1] << std::endl;
+        std::cerr << "Squareroot of eta_" << k + 1 << " = " << A_hat[k][k - 1] << "\n\n";
+
+        for (int l = k; l < d; l++)
+        {
+            // Calculate gamma_{l,k}
+            std::complex<double> gamma_products = 0.0;
+
+            for (int i = 0; i <= k - 1; i++)
+            {
+                auto temp = std::conj(A_hat[i][k - 1]) * A_hat[i][l];
+                gamma_products += temp;
+                std::cerr << "Ahat[" << i << "][" << k - 1 << "] = " << A_hat[i][k - 1] << ", Ahat[" << i << "][" << l << "] = " << A_hat[i][l] << ", multipled = " << temp << std::endl;
+            }
+
+            A_hat[k][l] = (inner_products[k][l + 1] / A_hat[k][k - 1]) - (gamma_products / A_hat[k][k - 1]); // gamma_{l,k}
+            if (A_hat[k][l].real() < 0)
+                A_hat[k][l] *= -1;
+
+            std::cerr << "gamma_sums = " << gamma_products << std::endl;
+            std::cerr << "<A^" << l + 1 << ", A^" << k << "> = " << inner_products[k][l + 1] << std::endl;
+            std::cerr << "gamma_{" << l + 1 << "," << k + 1 << "} = A_hat[" << k << "][" << l << "] = " << (inner_products[k][l + 1] / A_hat[k][k - 1]) << " - " << (gamma_products / A_hat[k][k - 1]) << " = " << A_hat[k][l] << "\n\n";
+        }
+    }
+
+    return A_hat;
+}
 /*
 Main loops as presented by Max in overleaf text.
 In the text when seeing gamme_{l,k}, it it means we are looking at the k'th row and l'th column.
@@ -132,16 +191,16 @@ dd::CMat get_A_hat(const std::vector<std::vector<dd::fp>> &inner_products)
 
     for (luint k = 1; k < d; k++)
     {
+        // Calculate eta_k
+        std::complex<double> coeff_sum = 0.0;
+        for (luint i = 0; i < k; i++)
+        {
+            coeff_sum += std::pow(std::abs(A_hat[i][k - 1]), 2);
+        }
+        A_hat[k][k - 1] = sqrt(inner_products[k][k] - coeff_sum); // eta_k
+        // std::cerr << "eta_" << k + 1 << "= A_hat[" << k << "][" << k - 1 << "] = " << A_hat[k][k - 1] << "\n";
         for (luint l = k; l < d; l++)
         {
-            // Calculate eta_k
-            std::complex<double> coeff_sum = 0.0;
-            for (luint i = 0; i < k; i++)
-            {
-                coeff_sum += std::pow(std::abs(A_hat[i][k - 1]), 2);
-            }
-            A_hat[k][k - 1] = sqrt(inner_products[k][k] - coeff_sum); // eta_k
-            // std::cerr << "eta_" << k + 1 << "= A_hat[" << k << "][" << k - 1 << "] = " << A_hat[k][k - 1] << "\n";
 
             // Calculate gamma_{l,k}
             std::complex<double> gamma_products = 0.0;
