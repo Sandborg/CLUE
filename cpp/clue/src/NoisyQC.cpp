@@ -105,7 +105,7 @@ qc::QuantumComputation *NoiseModel::build_noisy_qc(qc::QuantumComputation &qc)
     return noisy_qc;
 }
 
-dd::CMat collect_eta_gamma(const std::vector<std::vector<dd::fp>> &inner_products)
+dd::CMat NoiseModel::collect_eta_gamma(const std::vector<std::vector<dd::fp>> &inner_products)
 {
     luint d = inner_products.size() - 1; // size - 1 because inner product matrix is 1 bigger than d.
     dd::CMat A_hat(d, dd::CVec(d, clue::CC(0)));
@@ -178,7 +178,7 @@ this means i don't use k - 1 in <A^k-1,A^k-1> for example, since k = 1 in this l
 On line 211, i use l + 1, because that vector is made so that indexes tell the number of times a circuit have been applied to a state,
 thus, inner_products[1][2] is <A²,A¹>, for this reason we have to use l + 1.
 */
-dd::CMat get_A_hat(const std::vector<std::vector<dd::fp>> &inner_products)
+dd::CMat NoiseModel::get_A_hat(const std::vector<std::vector<dd::fp>> &inner_products)
 {
 
     luint d = inner_products.size() - 1; // size - 1 because inner product matrix is 1 bigger than d.
@@ -221,7 +221,7 @@ dd::CMat get_A_hat(const std::vector<std::vector<dd::fp>> &inner_products)
 /*
 We want to remove the last column from A_hat and the place e1 as the first column in I_gscb.
 */
-dd::CMat get_I_gscb(const dd::CMat &A_hat)
+dd::CMat NoiseModel::get_I_gscb(const dd::CMat &A_hat)
 {
 
     luint d = A_hat.size();

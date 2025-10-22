@@ -80,10 +80,6 @@ protected:
     /* Method to get the observable for use with DD */
     virtual dd::vEdge dd_observable(); // TODO Currently not working
 
-    /* Method to get the fidelity between expected result and succes state (might only be useful for Grover?)*/
-    virtual dd::fp calc_fidelity(dd::vEdge) = 0;
-    virtual dd::fp calc_fidelity(dd::vEdge &, dd::vEdge &) = 0;
-
 private:
     /* Method that runs the CLUE reduction (only used when this->type == DDSIM_ALONE) */
     void run_ddsim_alone();
@@ -93,6 +89,9 @@ private:
     void sim_n_iterations(dd::vEdge &, luint iterations);
     std::vector<std::vector<dd::fp>> collect_inner_products(const dd::vEdge &, luint, luint);
     std::vector<dd::fp> collect_expected_inner_products(const dd::vEdge &, luint, luint);
+    /* Method to get the fidelity between expected result and succes state (might only be useful for Grover?)*/
+    virtual dd::fp calc_fidelity(dd::vEdge) = 0;                // Used when we want to compare the result of a simulation to the goal state
+    virtual dd::fp calc_fidelity(dd::vEdge &, dd::vEdge &) = 0; // Used when we want to calc the fidelity between two state, e.g. when wanting to calculate <A^l \rho, A^k \rho>.
 
 public:
     /** CONSTRUCTORS **/

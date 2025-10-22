@@ -214,7 +214,7 @@ using InverseType = std::conditional_t<
         std::is_same_v<T, std::complex<float>>,
         std::complex<double>,
         T>>;
-
+// Placing the definition to get_inverse here since InverseType<T> wouldn't work if placed in cpp I believe.
 template <typename T>
 std::vector<std::vector<InverseType<T>>> get_inverse(std::vector<std::vector<T>> A_copy)
 {

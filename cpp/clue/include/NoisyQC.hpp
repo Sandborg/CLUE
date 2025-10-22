@@ -27,9 +27,9 @@ public:
     double getPhaseFlip() { return p_phaseflip; }
     double getAmpltitudeDamping() { return p_amplitude_damp; }
     qc::QuantumComputation *build_noisy_qc(qc::QuantumComputation &); // Build a noisy quantum circuit based on the epsilon values. Have to return a pointer to match with experiment class.
-};
 
-/* Methods for bisimulation of noisy matrices*/
-dd::CMat collect_eta_gamma(const std::vector<std::vector<dd::fp>> &);
-dd::CMat get_A_hat(const std::vector<std::vector<dd::fp>> &);
-dd::CMat get_I_gscb(const dd::CMat &);
+    /* Methods for bisimulation of noisy matrices*/
+    dd::CMat collect_eta_gamma(const std::vector<std::vector<dd::fp>> &);
+    dd::CMat get_A_hat(const std::vector<std::vector<dd::fp>> &);
+    dd::CMat get_I_gscb(const dd::CMat &);
+};

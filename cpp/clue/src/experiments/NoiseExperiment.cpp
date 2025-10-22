@@ -235,15 +235,15 @@ void NoiseExperiment::run_ddsim_noise()
 
     cerr << "\n";
 
-    dd::CMat Ahat = collect_eta_gamma(inner_products);
+    dd::CMat Ahat = this->noise_model->collect_eta_gamma(inner_products);
     // dd::CMat Ahat = get_A_hat(inner_products);
-    dd::CMat I_gscb = get_I_gscb(Ahat);
+    dd::CMat I_gscb = this->noise_model->get_I_gscb(Ahat);
     dd::CMat I_gscb_inverse = get_inverse(I_gscb);
     dd::CMat Chat = matmul(Ahat, I_gscb_inverse);
     dd::CMat Chat_k = matrix_power(Chat, this->iterations);
     dd::CVec Chat_e1(d);
 
-    // We collect the first column in Chat. This is faster than calling matmul.
+    // We collect the first column in Chat.
     for (luint i = 0; i < d; i++)
     {
         Chat_e1[i] = Chat_k[i][0];
